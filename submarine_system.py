@@ -23,5 +23,10 @@ class Submarine:
         self._serial_number = value
 
 
-if __name__ == "__main__":
+def main() -> None:
     sub = Submarine("00000000-00")
+    
+
+if __name__ == "__main__":
+    main()
+    
