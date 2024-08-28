@@ -1,12 +1,12 @@
 from typing import NewType
-import re
+import re, os
 
 
 SerialNumber = NewType('SerialNumber', str)
 
 
 class Submarine:
-    _serial_number_pattern = re.compile(r"^d{8}-d{2}$")
+    _serial_number_pattern = re.compile(r"^\d{8}-\d{2}$")
 
     def __init__(self, serial_number: SerialNumber) -> None:
         """ A submarine. """
@@ -18,13 +18,17 @@ class Submarine:
 
     @serial_number.setter
     def serial_number(self, value: str) -> None:
-        if not self._serial_number_pattern.match(value):
+        if self._serial_number_pattern.match(value):
+            self._serial_number = value
+        else:
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
-        self._serial_number = value
+        
 
 
 def main() -> None:
-    sub = Submarine("00000000-00")
+    # Make directory
+    if not os.path.isdir("MovementReports"):
+        os.mkdir("MovementReports")
     
 
 if __name__ == "__main__":
