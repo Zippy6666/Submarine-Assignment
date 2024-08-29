@@ -22,14 +22,19 @@ class Submarine:
             self._serial_number = value
         else:
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
-        
+
+
+def make_dirs() -> None:
+    """ Make directories"""
+    if not os.path.isdir("MovementReports"):
+        os.mkdir("MovementReports")
+    if not os.path.isdir("SensorData"):
+        os.mkdir("SensorData")
 
 
 def main() -> None:
-    # Make directory
-    if not os.path.isdir("MovementReports"):
-        os.mkdir("MovementReports")
-    
+    make_dirs()
+
 
 if __name__ == "__main__":
     main()
