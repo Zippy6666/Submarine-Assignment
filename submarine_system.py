@@ -10,7 +10,8 @@ class Submarine:
 
     def __init__(self, serial_number: SerialNumber) -> None:
         """ A submarine. """
-        self.serial_number = serial_number
+        self._serial_number = serial_number
+        self._position = [0, 0]
 
     @property
     def serial_number(self) -> str:
@@ -25,12 +26,13 @@ class Submarine:
 
 
 def make_dirs() -> None:
-    """ Make directories"""
+    """ Make directories if not present """
     if not os.path.isdir("MovementReports"):
         os.mkdir("MovementReports")
     if not os.path.isdir("SensorData"):
         os.mkdir("SensorData")
-
+    if not os.path.isdir("Secrets"):
+        os.mkdir("Secrets")
 
 def main() -> None:
     make_dirs()

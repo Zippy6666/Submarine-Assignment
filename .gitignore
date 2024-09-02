@@ -162,4 +162,7 @@ cython_debug/
 #.idea/
 
 notes.md
+todo.md
 MovementReports
+SensorData
+Secrets
