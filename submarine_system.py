@@ -3,6 +3,7 @@ import re, os
 
 
 SerialNumber = NewType('SerialNumber', str)
+Position = NewType("Position", list)
 
 
 class Submarine:
@@ -10,8 +11,9 @@ class Submarine:
 
     def __init__(self, serial_number: SerialNumber) -> None:
         """ A submarine. """
-        self._serial_number = serial_number
-        self._position = [0, 0]
+        self._serial_number: SerialNumber = serial_number
+        self._position: Position = [0, 0]
+        self._sensors: str = "1"*208
 
     @property
     def serial_number(self) -> str:
@@ -36,6 +38,8 @@ def make_dirs() -> None:
 
 def main() -> None:
     make_dirs()
+    submarine = Submarine(SerialNumber("12345678-90"))
+    print(submarine.serial_number)
 
 
 if __name__ == "__main__":
