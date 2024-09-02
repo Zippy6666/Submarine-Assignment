@@ -13,17 +13,9 @@ class SubmarineSystem:
     class _Submarine:
         def __init__(self, serial_number: SerialNumber) -> None:
             """A submarine."""
-            self._serial_number: SerialNumber = serial_number
-            self._position: Position = [0, 0]
-            self._sensors: str = "1" * 208
-
-        @property
-        def serial_number(self) -> str:
-            return self._serial_number
-
-        @serial_number.setter
-        def serial_number(self, value: str) -> None:
-            self._serial_number = value
+            self.serial_number: SerialNumber = serial_number
+            self.position: Position = [0, 0]
+            self.sensors: str = "1" * 208
 
     def __init__(self) -> None:
         """A system for handling submarines"""
@@ -31,7 +23,7 @@ class SubmarineSystem:
         self._make_dirs()
 
     def __repr__(self) -> str:
-        return str( [f"Submarine {k} at position {v._position}" for k, v in self._submarines.items()] )
+        return str( [f"Submarine {k} at position {v.position}" for k, v in self._submarines.items()] )
 
     def _make_dirs(self) -> None:
         """Make directories if not present."""
