@@ -1,5 +1,6 @@
 from typing import NewType
 from collections import defaultdict
+from random import randint
 import re, os
 
 
@@ -21,9 +22,6 @@ class SubmarineSystem:
         """A system for handling submarines"""
         self._submarines: defaultdict[SerialNumber, self.Submarine] = defaultdict(bool)
         self._make_dirs()
-
-    def __repr__(self) -> str:
-        return str( [f"Submarine {k} at position {v.position}" for k, v in self._submarines.items()] )
 
     def _make_dirs(self) -> None:
         """Make directories if not present."""
@@ -47,9 +45,10 @@ class SubmarineSystem:
 
 def main() -> None:
     submarine_system: SubmarineSystem = SubmarineSystem()
-    submarine_system.register_submarine("11111111-11")
-    submarine_system.register_submarine("22222222-22")
-    print(submarine_system)
+
+    # Register some example submarines
+    for i in range(3000):
+        submarine_system.register_submarine(f"{randint(1000, 9999)}{i:04}-{randint(10, 99)}")
 
 
 
