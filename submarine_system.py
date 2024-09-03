@@ -1,5 +1,5 @@
 from typing import NewType, Optional
-import re, os, random
+import re, os
 
 
 SerialNumber = NewType("SerialNumber", str)
@@ -85,7 +85,7 @@ def main() -> None:
         serial_number: SerialNumber = SerialNumber(
             f"1234{i:04}-42"
         )
-        sub: SubmarineSystem.Submarine = system.register_submarine(serial_number)
+        system.register_submarine(serial_number)
 
 
 if __name__ == "__main__":
