@@ -53,7 +53,7 @@ class SubmarineSystem:
 
     def __init__(self) -> None:
         """The system for handling submarines"""
-        self._submarines: dict[SerialNumber, self.Submarine] = {}
+        self._submarines: dict[SerialNumber, Submarine] = {}
         self._make_dirs()
 
     def lookup_submarine(self, serial_number: SerialNumber) -> Optional[Submarine]:
@@ -68,7 +68,7 @@ class SubmarineSystem:
         """Register or overwrite a submarine of given serial_number"""
         if not self.serial_number_pattern.match(serial_number):
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
-        submarine: self.Submarine = self.Submarine(self, serial_number)
+        submarine: Submarine = Submarine(self, serial_number)
         self._submarines[serial_number] = submarine
         return submarine
 
@@ -85,8 +85,8 @@ class SubmarineSystem:
             file.write(f"{direction} {distance}\n")
 
     def _log_submarine_sensors(self, sub: Submarine) -> None:
-        with open("MovementReports/" + sub.serial_number + ".txt", "a") as file:
-            file.write(f"{sub.sensor_data}\n")
+        with open("SensorData/" + sub.serial_number + ".txt", "a") as file:
+            file.write("".join(sub.sensors)+"\n")
 
 
 def simulate(system: SubmarineSystem) -> None:
@@ -99,7 +99,7 @@ def simulate(system: SubmarineSystem) -> None:
         # Break sensors randomly
         if random.randint(1, 4)==1:
             sub.sensors[random.randint(0, 207)] = "0"
-
+            
         # Use sensors, this will log sensor data
         sub.use_sensors()
     
