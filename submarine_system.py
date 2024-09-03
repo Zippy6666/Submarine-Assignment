@@ -1,5 +1,5 @@
 from typing import NewType, Optional
-import re, os, time, random, atexit, shutil
+import re, os, time, random, shutil
 
 
 SerialNumber = NewType("SerialNumber", str)
@@ -23,6 +23,10 @@ class Submarine:
     @property
     def sensors(self):
         return self._sensors
+    
+    @property
+    def dist_from_base(self):
+        return ( self._position[0]**2 + self._position[1]**2 ) ** 0.5
     
     def use_sensors(self) -> None:
         # Insert logic here...
@@ -71,6 +75,9 @@ class SubmarineSystem:
         submarine: Submarine = Submarine(self, serial_number, sensors)
         self._submarines[serial_number] = submarine
         return submarine
+    
+    def get_furthest_submarine(self) -> Submarine:
+        ...
 
     def _make_dirs(self) -> None:
         """Make directories if not present."""
@@ -87,6 +94,12 @@ class SubmarineSystem:
     def _log_submarine_sensors(self, sub: Submarine) -> None:
         with open("SensorData/" + sub.serial_number + ".txt", "a") as file:
             file.write("".join(sub.sensors)+"\n")
+
+    def _submarines_sorted_by_distance(self) -> list:
+        return sorted(self._submarines.values(), key=lambda submarine: submarine.dist_from_base)
+
+    def _submarines_sorted_by_vertical_distance(self) -> list:
+        raise NotImplementedError
 
 
 def simulate(system: SubmarineSystem) -> None:
