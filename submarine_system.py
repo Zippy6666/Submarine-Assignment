@@ -61,7 +61,6 @@ class SubmarineSystem:
     def __init__(self) -> None:
         """The system for handling submarines"""
         self._submarines: dict[SerialNumber, Submarine] = {}
-        self._make_dirs()
 
     def lookup_submarine(self, serial_number: SerialNumber) -> Optional[Submarine]:
         """Get a submarine by serial number if it exists"""
@@ -94,12 +93,6 @@ class SubmarineSystem:
     def get_highest_submarine(self) -> Submarine:
         submarines_sorted_by_dist: list[Submarine] = self._submarines_sorted_by_vertical_distance()
         return submarines_sorted_by_dist[len(submarines_sorted_by_dist)-1]
-
-    def _make_dirs(self) -> None:
-        """Make directories if not present."""
-        os.makedirs("MovementReports", exist_ok=True)
-        os.makedirs("SensorData", exist_ok=True)
-        os.makedirs("Secrets", exist_ok=True)
 
     def _log_submarine_movement(
         self, serial_number: SerialNumber, direction: str, distance: int
@@ -135,7 +128,15 @@ def simulate(system: SubmarineSystem) -> None:
 
 def main() -> None:
     """ Submarine simulation """
-    shutil.rmtree("SensorData", ignore_errors=True) # Clear sensordata
+    
+    # Remove old dirs / make new ones
+    shutil.rmtree("MovementReports", ignore_errors=True)
+    shutil.rmtree("SensorData", ignore_errors=True)
+    shutil.rmtree("Secrets", ignore_errors=True)
+    os.makedirs("MovementReports", exist_ok=True)
+    os.makedirs("SensorData", exist_ok=True)
+    os.makedirs("Secrets", exist_ok=True)
+
     system: SubmarineSystem = SubmarineSystem()
 
     # Register some example submarines
