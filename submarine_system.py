@@ -21,18 +21,21 @@ class Submarine:
         return self._serial_number
 
     @property
-    def sensors(self):
+    def sensors(self) -> list[str]:
         return self._sensors
     
     @property
-    def dist_from_base(self):
+    def position(self) -> Position:
+        return self._position
+    
+    @property
+    def dist_from_base(self) -> float:
         return ( self._position[0]**2 + self._position[1]**2 ) ** 0.5
     
     def use_sensors(self) -> None:
-        # Insert logic here...
         self._system._log_submarine_sensors(self)
 
-    def move(self, direction: str, distance: int):
+    def move(self, direction: str, distance: int) -> None:
         match direction:
             case "up":
                 self._position[0] += distance
@@ -49,7 +52,7 @@ class Submarine:
         )
     
     def __repr__( self ) -> str:
-        return f"Submarine {self._serial_number} at {self._position}"
+        return f"<Submarine {self._serial_number} at {self._position}>"
 
 
 class SubmarineSystem:
@@ -77,12 +80,25 @@ class SubmarineSystem:
         return submarine
     
     def get_furthest_submarine(self) -> Submarine:
-        ...
+        submarines_sorted_by_dist: list[Submarine] = self._submarines_sorted_by_distance()
+        return submarines_sorted_by_dist[len(submarines_sorted_by_dist)-1]
+
+    def get_closest_submarine(self) -> Submarine:
+        submarines_sorted_by_dist: list[Submarine] = self._submarines_sorted_by_distance()
+        return submarines_sorted_by_dist[0]
+
+    def get_lowest_submarine(self) -> Submarine:
+        submarines_sorted_by_dist: list[Submarine] = self._submarines_sorted_by_vertical_distance()
+        return submarines_sorted_by_dist[0]
+
+    def get_highest_submarine(self) -> Submarine:
+        submarines_sorted_by_dist: list[Submarine] = self._submarines_sorted_by_vertical_distance()
+        return submarines_sorted_by_dist[len(submarines_sorted_by_dist)-1]
 
     def _make_dirs(self) -> None:
         """Make directories if not present."""
         os.makedirs("MovementReports", exist_ok=True)
-        os.makedirs("Sensordata", exist_ok=True)
+        os.makedirs("SensorData", exist_ok=True)
         os.makedirs("Secrets", exist_ok=True)
 
     def _log_submarine_movement(
@@ -95,11 +111,11 @@ class SubmarineSystem:
         with open("SensorData/" + sub.serial_number + ".txt", "a") as file:
             file.write("".join(sub.sensors)+"\n")
 
-    def _submarines_sorted_by_distance(self) -> list:
+    def _submarines_sorted_by_distance(self) -> list[Submarine]:
         return sorted(self._submarines.values(), key=lambda submarine: submarine.dist_from_base)
 
-    def _submarines_sorted_by_vertical_distance(self) -> list:
-        raise NotImplementedError
+    def _submarines_sorted_by_vertical_distance(self) -> list[Submarine]:
+        return sorted(self._submarines.values(), key=lambda submarine: submarine.position[0])
 
 
 def simulate(system: SubmarineSystem) -> None:
@@ -120,26 +136,25 @@ def simulate(system: SubmarineSystem) -> None:
 def main() -> None:
     """ Submarine simulation """
     shutil.rmtree("SensorData", ignore_errors=True) # Clear sensordata
-
     system: SubmarineSystem = SubmarineSystem()
 
     # Register some example submarines
     print("Generating example submarines...")
     submarine_count: int = 3000
     for i in range(submarine_count):
-        serial_number: SerialNumber = SerialNumber(
-            f"1234{i:04}-42"
-        )
-        # Create a submarine with all sensors working
-        system.register_submarine(serial_number, ["1" for _ in range(208)])
+        serial_number: SerialNumber = SerialNumber(f"1234{i:04}-42")
+        system.register_submarine(serial_number, ["1" for _ in range(208)]) # Create a submarine with all sensors working
     print(submarine_count, "submarines created!")
-
 
     print("Simulating submarines...")
     while True:
         simulate(system)
-        time.sleep(1)
-        print("One iteration simulated!")
+        time.sleep(5)
+        sub_closest = system.get_closest_submarine()
+        sub_furthest = system.get_furthest_submarine()
+        sub_highest = system.get_highest_submarine()
+        sub_lowest = system.get_lowest_submarine()
+        print(f"One iteration done, closest {sub_closest}, furthest {sub_furthest}, highest {sub_highest}, lowest {sub_lowest}")
 
 
 if __name__ == "__main__":
