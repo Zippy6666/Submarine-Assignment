@@ -17,20 +17,9 @@ class SubmarineSystem:
             self._position: Position = Position([0, 0])
             self._sensors: str = "1" * 208
 
-    class _SubmarineRegistry:
-        def __init__(self) -> None:
-            self._store: dict[SerialNumber, self.Submarine] = {}
-
-        def retrieve(self, serial_number: SerialNumber) -> Optional["SubmarineSystem._Submarine"]:
-            return self._store.get(serial_number)
-        
-        def _register(self, serial_number: SerialNumber, submarine: "SubmarineSystem._Submarine") -> None:
-            self._store[serial_number] = submarine
-
-
     def __init__(self) -> None:
         """The system for handling submarines"""
-        self._submarines: self._SubmarineRegistry = self._SubmarineRegistry()
+        self._submarines: dict[SerialNumber, self._Submarine] = {}
         self._make_dirs()
 
     def _make_dirs(self) -> None:
@@ -42,17 +31,16 @@ class SubmarineSystem:
         if not os.path.isdir("Secrets"):
             os.mkdir("Secrets")
 
-    @property
-    def submarines(self) -> _SubmarineRegistry:
-        """The submarine registry in the system"""
-        return self._submarines
+    def lookup_submarine(self, serial_number:SerialNumber) -> Optional[_Submarine]:
+        """Get a submarine by serial number if it exists"""
+        return self._submarines.get(serial_number)
 
     def register_submarine(self, serial_number: SerialNumber) -> None:
         """Register or overwrite a submarine of given serial_number"""
         if not self.serial_number_pattern.match(serial_number):
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
         submarine: self._Submarine = self._Submarine(serial_number)
-        self._submarines._register(SerialNumber(serial_number), submarine)
+        self._submarines[serial_number] = submarine
 
 
 def main() -> None:
@@ -60,11 +48,11 @@ def main() -> None:
 
     # Register some example submarines
     for i in range(3000):
-        serial_number = SerialNumber(f"{randint(1000, 9999)}{i:04}-{randint(10, 99)}")
+        serial_number: SerialNumber = SerialNumber(f"{randint(1000, 9999)}{i:04}-{randint(10, 99)}")
         system.register_submarine(serial_number)
 
-    print(system.submarines.retrieve("test"))
-    print(system.submarines.retrieve(serial_number))
+    print(system.lookup_submarine("hello"))
+    print(system.lookup_submarine(serial_number))
 
 
 if __name__ == "__main__":
