@@ -21,8 +21,12 @@ class SubmarineSystem:
         def __init__(self) -> None:
             self._store: dict[SerialNumber, self.Submarine] = {}
 
-        def get(self, serial_number: SerialNumber) -> Optional["SubmarineSystem._Submarine"]:
+        def retrieve(self, serial_number: SerialNumber) -> Optional["SubmarineSystem._Submarine"]:
             return self._store.get(serial_number)
+        
+        def _register(self, serial_number: SerialNumber, submarine: "SubmarineSystem._Submarine") -> None:
+            self._store[serial_number] = submarine
+
 
     def __init__(self) -> None:
         """The system for handling submarines"""
@@ -48,7 +52,7 @@ class SubmarineSystem:
         if not self.serial_number_pattern.match(serial_number):
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
         submarine: self._Submarine = self._Submarine(serial_number)
-        self._submarines[serial_number] = submarine
+        self._submarines._register(SerialNumber(serial_number), submarine)
 
 
 def main() -> None:
@@ -59,8 +63,8 @@ def main() -> None:
         serial_number = SerialNumber(f"{randint(1000, 9999)}{i:04}-{randint(10, 99)}")
         system.register_submarine(serial_number)
 
-    print(system.submarines.get("test"))
-    print(system.submarines.get(serial_number))
+    print(system.submarines.retrieve("test"))
+    print(system.submarines.retrieve(serial_number))
 
 
 if __name__ == "__main__":
