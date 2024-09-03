@@ -18,18 +18,13 @@ class SubmarineSystem:
         """Get a submarine by serial number if it exists"""
         return self._submarines.get(serial_number)
 
-    def register_submarine(self, serial_number: SerialNumber) -> None:
+    def register_submarine(self, serial_number: SerialNumber) -> "Submarine":
         """Register or overwrite a submarine of given serial_number"""
         if not self.serial_number_pattern.match(serial_number):
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
         submarine: self.Submarine = self.Submarine(self, serial_number)
         self._submarines[serial_number] = submarine
-
-    def simulate_movements(self, amount: int) -> None:
-        for _, sub in self._submarines.items():
-            for _ in range(amount):
-                sub.move(random.choice(("up", "down", "left", "right")), random.randint(1, 10))
-
+        return submarine
 
     def _make_dirs(self) -> None:
         """Make directories if not present."""
@@ -43,8 +38,10 @@ class SubmarineSystem:
         with open("MovementReports/" + serial_number + ".txt", "a") as file:
             file.write(f"{direction} {distance}\n")
 
-    def _log_submarine_sensors(self) -> None:
-        raise NotImplementedError
+    def _log_submarine_sensors(self, serial_number: SerialNumber) -> None:
+        sub = self.lookup_submarine(serial_number)
+        with open("MovementReports/" + serial_number + ".txt", "a") as file:
+            file.write(f"{sub.sensor_data}\n")
 
     class Submarine:
         def __init__(
@@ -55,6 +52,10 @@ class SubmarineSystem:
             self._position: Position = Position([0, 0])
             self._sensors: str = "1" * 208
             self._system: SubmarineSystem = system
+
+        @property
+        def sensor_data(self):
+            return self._sensors
 
         def move(self, direction: str, distance: int):
             match direction:
@@ -82,13 +83,9 @@ def main() -> None:
     # Register some example submarines
     for i in range(3000):
         serial_number: SerialNumber = SerialNumber(
-            f"{i:04}2222-42"
+            f"1234{i:04}-42"
         )
-        system.register_submarine(serial_number)
-
-
-    system.simulate_movements(300)
-
+        sub: SubmarineSystem.Submarine = system.register_submarine(serial_number)
 
 
 if __name__ == "__main__":
