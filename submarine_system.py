@@ -1,5 +1,5 @@
 from typing import NewType, Optional
-import re, os, time, random
+import re, os, time, random, atexit, shutil
 
 
 SerialNumber = NewType("SerialNumber", str)
@@ -8,12 +8,12 @@ Position = NewType("Position", list)
 
 class Submarine:
     def __init__(
-        self, system: "SubmarineSystem", serial_number: SerialNumber
+        self, system: "SubmarineSystem", serial_number: SerialNumber, sensors:list[str]
     ) -> None:
         """A submarine."""
         self._serial_number: SerialNumber = serial_number
         self._position: Position = Position([0, 0])
-        self._sensors: list[str] = ["1" for _ in range(208)]
+        self._sensors: list[str] = sensors
         self._system: SubmarineSystem = system
 
     @property
@@ -64,11 +64,11 @@ class SubmarineSystem:
         """ Returns a list of all registered submarines """
         return self._submarines.values()
 
-    def register_submarine(self, serial_number: SerialNumber) -> Submarine:
+    def register_submarine(self, serial_number: SerialNumber, sensors: list[str]) -> Submarine:
         """Register or overwrite a submarine of given serial_number"""
         if not self.serial_number_pattern.match(serial_number):
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
-        submarine: Submarine = Submarine(self, serial_number)
+        submarine: Submarine = Submarine(self, serial_number, sensors)
         self._submarines[serial_number] = submarine
         return submarine
 
@@ -105,16 +105,28 @@ def simulate(system: SubmarineSystem) -> None:
     
 
 def main() -> None:
+    """ Submarine simulation """
+    shutil.rmtree("SensorData", ignore_errors=True) # Clear sensordata
+
     system: SubmarineSystem = SubmarineSystem()
 
     # Register some example submarines
-    for i in range(3000):
+    print("Generating example submarines...")
+    submarine_count: int = 3000
+    for i in range(submarine_count):
         serial_number: SerialNumber = SerialNumber(
             f"1234{i:04}-42"
         )
-        system.register_submarine(serial_number)
+        # Create a submarine with all sensors working
+        system.register_submarine(serial_number, ["1" for _ in range(208)])
+    print(submarine_count, "submarines created!")
 
-    simulate(system)
+
+    print("Simulating submarines...")
+    while True:
+        simulate(system)
+        time.sleep(1)
+        print("One iteration simulated!")
 
 
 if __name__ == "__main__":
