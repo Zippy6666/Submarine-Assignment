@@ -1,5 +1,4 @@
-from typing import NewType
-from collections import defaultdict
+from typing import NewType, Optional
 from random import randint
 import re, os
 
@@ -14,13 +13,20 @@ class SubmarineSystem:
     class _Submarine:
         def __init__(self, serial_number: SerialNumber) -> None:
             """A submarine."""
-            self.serial_number: SerialNumber = serial_number
-            self.position: Position = [0, 0]
-            self.sensors: str = "1" * 208
+            self._serial_number: SerialNumber = serial_number
+            self._position: Position = Position([0, 0])
+            self._sensors: str = "1" * 208
+
+    class _SubmarineRegistry:
+        def __init__(self) -> None:
+            self._store: dict[SerialNumber, self.Submarine] = {}
+
+        def get(self, serial_number: SerialNumber) -> Optional["SubmarineSystem._Submarine"]:
+            return self._store.get(serial_number)
 
     def __init__(self) -> None:
-        """A system for handling submarines"""
-        self._submarines: defaultdict[SerialNumber, self.Submarine] = defaultdict(bool)
+        """The system for handling submarines"""
+        self._submarines: self._SubmarineRegistry = self._SubmarineRegistry()
         self._make_dirs()
 
     def _make_dirs(self) -> None:
@@ -32,11 +38,13 @@ class SubmarineSystem:
         if not os.path.isdir("Secrets"):
             os.mkdir("Secrets")
 
-    def get_submarine(self, serial_number: SerialNumber) -> _Submarine | bool:
-        """Return the submarine instance of the given serialnumber. Returns False if none was found."""
-        return self._submarines[serial_number]
+    @property
+    def submarines(self) -> _SubmarineRegistry:
+        """The submarine registry in the system"""
+        return self._submarines
 
     def register_submarine(self, serial_number: SerialNumber) -> None:
+        """Register or overwrite a submarine of given serial_number"""
         if not self.serial_number_pattern.match(serial_number):
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
         submarine: self._Submarine = self._Submarine(serial_number)
@@ -44,12 +52,15 @@ class SubmarineSystem:
 
 
 def main() -> None:
-    submarine_system: SubmarineSystem = SubmarineSystem()
+    system: SubmarineSystem = SubmarineSystem()
 
     # Register some example submarines
     for i in range(3000):
-        submarine_system.register_submarine(f"{randint(1000, 9999)}{i:04}-{randint(10, 99)}")
+        serial_number = SerialNumber(f"{randint(1000, 9999)}{i:04}-{randint(10, 99)}")
+        system.register_submarine(serial_number)
 
+    print(system.submarines.get("test"))
+    print(system.submarines.get(serial_number))
 
 
 if __name__ == "__main__":
