@@ -5,6 +5,7 @@ An assigment regarding effective python code.
 ## Teknisk bakgrund och val
 ### SubmarineSystem klassen
 - Själva user interfacet, man skapar ett submarine system objekt som man sedan interagerar med som användare.
+- Håller koll på alla ubåter i ett dictionary. Detta möjliggör snabb hämtning av ubåtar. Dictionaryt indexeras genom ubåtens serie-nummer.
 
 ### Submarine klassen
 - Bör ej instansiearas av användaren, endast genom ett SubmarineSystem objekt
