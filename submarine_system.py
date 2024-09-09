@@ -63,7 +63,7 @@ class SubmarineSystem:
 
                 # This movement report was invalid, skip and continue
                 if len(split) != 2 or not split[1].isdecimal():
-                    print(f"Warning: Movement report {i} is invalid. Skipping.")
+                    print(f"Warning: Movement report {i+1} for {sub} is invalid. Skipping.")
                     continue
 
                 sub.move(split[0], int(split[1]))
