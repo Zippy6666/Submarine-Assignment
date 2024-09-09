@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from typing import NewType, Optional
 from pathlib import Path
 import re, os
@@ -7,7 +7,8 @@ import re, os
 SerialNumber = NewType("SerialNumber", str)
 Position = NewType("Position", list[int])
 SubmarineInfo = NewType("SubmarineInfo", str)
-
+MovementLogEntry = NewType("MovementLogEntry", tuple[Position, str, int, Position])
+MovementLog = NewType("MovementLog", list[MovementLogEntry])
 
 class SubmarineSystem:
     serial_number_pattern = re.compile(r"^\d{8}-\d{2}$")
@@ -58,12 +59,12 @@ class SubmarineSystem:
             raise Exception(f"Submarine '{serial_number}' not found.")
 
         with open(f"MovementReports/{serial_number}.txt") as f:
-            for i, line in enumerate(f):
+            for line in f:
                 split = line.split()
 
                 # This movement report was invalid, skip and continue
                 if len(split) != 2 or not split[1].isdecimal():
-                    print(f"Warning: Movement report {i+1} for {sub} is invalid. Skipping.")
+                    print(f"Warning: One movement report for {sub} is invalid. Skipping.")
                     continue
 
                 sub.move(split[0], int(split[1]))
@@ -103,7 +104,7 @@ class SubmarineSystem:
         """Get submarines sorted by altetude from the base."""
 
         return sorted(self._submarines.values(), key=lambda submarine: submarine.position[0])
-    
+
     class _Submarine:
         def __init__(self, serial_number: SerialNumber) -> None:
             self._serial_number: SerialNumber = serial_number
@@ -121,7 +122,18 @@ class SubmarineSystem:
         def dist_from_base(self) -> float:
             """ The un-squared distance from the base. """
             return self._position[0] ** 2 + self._position[1] ** 2
+        
+        # @staticmethod
+        # def _log_movement(func: Callable) -> Callable:
+        #     def wrapper(self, dir, dist):
+        #         old_pos = self.position
+        #         return_value = func(self, dir, dist)
+                
+        #         return return_value
 
+        #     return wrapper
+
+        # @_log_movement
         def move(self, dir: str, dist: int) -> None:
             match dir:
                 case "up":
