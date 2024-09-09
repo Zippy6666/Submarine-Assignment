@@ -35,7 +35,7 @@ class SubmarineSystem:
         self._submarines[serial_number] = submarine
 
     def register_submarines_by_movement_reports(self) -> Generator[SerialNumber]:
-        """Register submarines by movement reports."""
+        """Register submarines by movement reports. Returns a generator that yields each serial number for the submarines."""
         if not os.path.isdir("MovementReports"):
             raise FileNotFoundError("No 'MovementReports' directory detected.")
         
