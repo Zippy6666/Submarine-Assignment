@@ -17,15 +17,17 @@ class SubmarineSystem:
         self._submarines: dict[SerialNumber, self._Submarine] = {}
         self._movement_logs: list = []
 
-    def lookup_submarine(self, serial_number: SerialNumber) -> Optional[SubmarineReport]:
+    def lookup_submarine(
+        self, serial_number: SerialNumber
+    ) -> Optional[SubmarineReport]:
         """Get a submarine by serial number if it exists."""
-        return SubmarineReport( str(self._submarines.get(serial_number)) )
+        return SubmarineReport(str(self._submarines.get(serial_number)))
 
     def register_submarine(self, serial_number: SerialNumber) -> None:
         """Register a submarine of given 'serial_number'."""
         if not self.serial_number_pattern.match(serial_number):
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
-        
+
         if not self._submarines.get(serial_number) is None:
             print(
                 f"Warning: Submarine {serial_number} already registered! Overwriting."
@@ -38,7 +40,7 @@ class SubmarineSystem:
         """Register submarines by movement reports. Returns a generator that yields each serial number for the submarines."""
         if not os.path.isdir("MovementReports"):
             raise FileNotFoundError("No 'MovementReports' directory detected.")
-        
+
         for file_name in os.listdir("MovementReports"):
             serial_number: str = Path(file_name).stem
             if self.serial_number_pattern.match(serial_number):
@@ -46,17 +48,17 @@ class SubmarineSystem:
                 yield serial_number
 
     def move_submarine_by_reports(self, serial_number: SerialNumber) -> None:
-        """ Read movement reports for this submarine, and move it accordingly """
+        """Read movement reports for this submarine, and move it accordingly"""
         if not os.path.isfile(f"MovementReports/{serial_number}.txt"):
             raise FileNotFoundError("No movement reports file detected.")
-        
+
         sub: Optional[self._Submarine] = self._submarines.get(serial_number)
-        
+
         if not sub:
             raise Exception(f"Submarine {serial_number} not found.")
 
         with open(f"MovementReports/{serial_number}.txt") as f:
-            for i, line in enumerate( f ):
+            for i, line in enumerate(f):
                 split: list[str] = line.split()
 
                 # This movement report was invalid, skip and continue
@@ -65,34 +67,30 @@ class SubmarineSystem:
                     continue
 
                 sub.move(split[0], int(split[1]))
-                
+
     def get_furthest_submarine(self) -> SubmarineReport:
         """Get the submarine furthest from the base."""
-        sorted_subs: list[self._Submarine] = (
-            self._submarines_sorted_by_distance()
-        )
-        return SubmarineReport( str(sorted_subs[len(sorted_subs) - 1]) )
+        sorted_subs: list[self._Submarine] = self._submarines_sorted_by_distance()
+        return SubmarineReport(str(sorted_subs[len(sorted_subs) - 1]))
 
     def get_closest_submarine(self) -> SubmarineReport:
         """Get the submarine closest to the base."""
-        sorted_subs: list[self._Submarine] = (
-            self._submarines_sorted_by_distance()
-        )
-        return SubmarineReport( str(sorted_subs[0]) )
+        sorted_subs: list[self._Submarine] = self._submarines_sorted_by_distance()
+        return SubmarineReport(str(sorted_subs[0]))
 
     def get_lowest_submarine(self) -> SubmarineReport:
         """Get the submarine at the lowest point form the base."""
         sorted_subs: list[self._Submarine] = (
             self._submarines_sorted_by_vertical_distance()
         )
-        return SubmarineReport( str(sorted_subs[0]) )
+        return SubmarineReport(str(sorted_subs[0]))
 
     def get_highest_submarine(self) -> SubmarineReport:
         """Get the submarine at the highest point from the base."""
         sorted_subs: list[self._Submarine] = (
             self._submarines_sorted_by_vertical_distance()
         )
-        return SubmarineReport( str(sorted_subs[len(sorted_subs) - 1]) )
+        return SubmarineReport(str(sorted_subs[len(sorted_subs) - 1]))
 
     def _submarines_sorted_by_distance(self) -> list["_Submarine"]:
         """Get submarines sorted by distance from the base."""
@@ -124,7 +122,7 @@ class SubmarineSystem:
         def dist_from_base(self) -> float:
             return (self._position[0] ** 2 + self._position[1] ** 2) ** 0.5
 
-        def move(self, dir:str, dist:int) -> None:
+        def move(self, dir: str, dist: int) -> None:
             match dir:
                 case "up":
                     self._position[0] += dist
@@ -142,8 +140,10 @@ class SubmarineSystem:
 def main() -> None:
     system: SubmarineSystem = SubmarineSystem()
 
-    for serial_number in system.register_submarines_by_movement_reports(): # ~ 6000 files
-        system.move_submarine_by_reports(serial_number) # ~ 100_000 line file read...
+    for (
+        serial_number
+    ) in system.register_submarines_by_movement_reports():  # ~ 6000 files
+        system.move_submarine_by_reports(serial_number)  # ~ 100_000 line file read...
         report: SubmarineReport = system.lookup_submarine(serial_number)
         print(f"Movement reports fetched for {report}")
 
