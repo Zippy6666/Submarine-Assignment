@@ -43,9 +43,8 @@ class SubmarineSystem:
 
         for file_name in os.listdir("MovementReports"):
             serial_number = Path(file_name).stem
-            if self.serial_number_pattern.match(serial_number):
-                self.register_submarine(serial_number)
-                yield serial_number
+            self.register_submarine(serial_number)
+            yield serial_number
 
     def move_submarine_by_reports(self, serial_number: SerialNumber) -> None:
         """Read movement reports for this submarine, and move it accordingly"""
