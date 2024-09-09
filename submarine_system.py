@@ -6,7 +6,7 @@ import re, os
 
 SerialNumber = NewType("SerialNumber", str)
 Position = NewType("Position", list[int])
-SubmarineReport = NewType("SubmarineReport", str)
+SubmarineInfo = NewType("SubmarineInfo", str)
 
 
 class SubmarineSystem:
@@ -17,7 +17,7 @@ class SubmarineSystem:
 
         self._submarines: dict[SerialNumber, self._Submarine] = {}
 
-    def lookup_submarine(self, serial_number: SerialNumber) -> Optional[SubmarineReport]:
+    def lookup_submarine(self, serial_number: SerialNumber) -> Optional[SubmarineInfo]:
         """Get a submarine by serial number if it exists."""
 
         sub = self._submarines.get(serial_number)
@@ -46,7 +46,7 @@ class SubmarineSystem:
             self.register_submarine(serial_number)
             yield serial_number
 
-    def move_submarine_by_reports(self, serial_number: SerialNumber) -> None:
+    def move_submarine_by_reports(self, serial_number: SerialNumber) -> SubmarineInfo:
         """Read movement reports for this submarine, and move it accordingly"""
 
         if not os.path.isfile(f"MovementReports/{serial_number}.txt"):
@@ -67,26 +67,28 @@ class SubmarineSystem:
                     continue
 
                 sub.move(split[0], int(split[1]))
+        
+        return str(sub)
 
-    def get_furthest_submarine(self) -> SubmarineReport:
+    def get_furthest_submarine(self) -> SubmarineInfo:
         """Get the submarine furthest from the base."""
 
         sorted_subs = self._get_subs_sorted_dist()
         return str(sorted_subs[len(sorted_subs) - 1])
 
-    def get_closest_submarine(self) -> SubmarineReport:
+    def get_closest_submarine(self) -> SubmarineInfo:
         """Get the submarine closest to the base."""
 
         sorted_subs = self._get_subs_sorted_dist()
         return str(sorted_subs[0])
 
-    def get_lowest_submarine(self) -> SubmarineReport:
+    def get_lowest_submarine(self) -> SubmarineInfo:
         """Get the submarine at the lowest point form the base."""
 
         sorted_subs = self._get_subs_sorted_vertical()
         return str(sorted_subs[0])
 
-    def get_highest_submarine(self) -> SubmarineReport:
+    def get_highest_submarine(self) -> SubmarineInfo:
         """Get the submarine at the highest point from the base."""
 
         sorted_subs = self._get_subs_sorted_vertical()
@@ -139,10 +141,8 @@ def main() -> None:
     system: SubmarineSystem = SubmarineSystem()
 
     for serial_number in system.register_submarines_by_movement_reports():  # ~ 6 000 files
-        system.move_submarine_by_reports(serial_number)  # ~ 100 000 line file read...
-
-        report: SubmarineReport = system.lookup_submarine(serial_number)
-        print(f"Movement reports fetched for {report}")
+        info: SubmarineInfo = system.move_submarine_by_reports(serial_number)  # ~ 100 000 line file read...
+        print(f"Movement reports fetched for {info}")
 
 
 if __name__ == "__main__":
