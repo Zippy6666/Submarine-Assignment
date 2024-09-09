@@ -118,7 +118,8 @@ class SubmarineSystem:
 
         @property
         def dist_from_base(self) -> float:
-            return (self._position[0] ** 2 + self._position[1] ** 2) ** 0.5
+            """ The un-squared distance from the base. """
+            return self._position[0] ** 2 + self._position[1] ** 2
 
         def move(self, dir: str, dist: int) -> None:
             match dir:
@@ -138,8 +139,8 @@ class SubmarineSystem:
 def main() -> None:
     system: SubmarineSystem = SubmarineSystem()
 
-    for serial_number in system.register_submarines_by_movement_reports():  # ~ 6000 files
-        system.move_submarine_by_reports(serial_number)  # ~ 100_000 line file read...
+    for serial_number in system.register_submarines_by_movement_reports():  # ~ 6 000 files
+        system.move_submarine_by_reports(serial_number)  # ~ 100 000 line file read...
 
         report: SubmarineReport = system.lookup_submarine(serial_number)
         print(f"Movement reports fetched for {report}")
