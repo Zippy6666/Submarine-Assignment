@@ -1,14 +1,15 @@
 from collections.abc import Callable, Generator
 from typing import NewType, Optional
 from pathlib import Path
-import re, os
+import re, os, atexit
 
 
 SerialNumber = NewType("SerialNumber", str)
 Position = NewType("Position", list[int])
 SubmarineInfo = NewType("SubmarineInfo", str)
-MovementLogEntry = NewType("MovementLogEntry", tuple[Position, str, int, Position])
+MovementLogEntry = NewType("MovementLogEntry", str)
 MovementLog = NewType("MovementLog", list[MovementLogEntry])
+
 
 class SubmarineSystem:
     serial_number_pattern = re.compile(r"^\d{8}-\d{2}$")
@@ -36,6 +37,19 @@ class SubmarineSystem:
         # Create new submarine
         self._submarines[serial_number] = self._Submarine(serial_number)
 
+    def count_sensor_errors(self, serial_number: SerialNumber):
+        """Not implemented."""
+
+        if not os.path.isdir("Sensordata"):
+            raise FileNotFoundError("No 'Sensordata' directory detected.")
+        
+        raise NotImplementedError()
+
+    def get_submarine_movement_log(self, serial_number: SerialNumber) -> MovementLog:
+        """Retrieve the latest movement logs for the submarine."""
+        sub = self._submarines.get(serial_number)
+        return sub.movement_log
+    
     def register_submarines_by_movement_reports(self) -> Generator[SerialNumber]:
         """Register submarines by movement reports. Returns a generator that yields each serial number for the submarines."""
 
@@ -106,9 +120,12 @@ class SubmarineSystem:
         return sorted(self._submarines.values(), key=lambda submarine: submarine.position[0])
 
     class _Submarine:
+        _max_logs = 100
+
         def __init__(self, serial_number: SerialNumber) -> None:
             self._serial_number: SerialNumber = serial_number
             self._position: Position = Position([0, 0])
+            self._movement_log: MovementLog = []
 
         @property
         def serial_number(self) -> SerialNumber:
@@ -122,18 +139,31 @@ class SubmarineSystem:
         def dist_from_base(self) -> float:
             """ The un-squared distance from the base. """
             return self._position[0] ** 2 + self._position[1] ** 2
-        
-        # @staticmethod
-        # def _log_movement(func: Callable) -> Callable:
-        #     def wrapper(self, dir, dist):
-        #         old_pos = self.position
-        #         return_value = func(self, dir, dist)
+
+        @property
+        def movement_log(self) -> MovementLog:
+            return self._movement_log
+
+        @staticmethod
+        def _log_movement(func: Callable) -> Callable:
+            def wrapper(self, dir, dist):
+                old_pos = self.position.copy()
                 
-        #         return return_value
+                return_value = func(self, dir, dist)
+                
+                log_entry: MovementLogEntry = f"{old_pos} {dir} {dist} {self.position}"
 
-        #     return wrapper
+                # Limit the log size
+                if len(self._movement_log) >= self._max_logs:
+                    self._movement_log.pop(0)
 
-        # @_log_movement
+                self._movement_log.append(log_entry)
+
+                return return_value
+
+            return wrapper
+
+        @_log_movement
         def move(self, dir: str, dist: int) -> None:
             match dir:
                 case "up":
@@ -146,11 +176,27 @@ class SubmarineSystem:
                     print(f"Warning: Invalid direction '{dir}'")
 
         def __str__(self) -> str:
-            return f"|Submarine {self._serial_number} at {self._position}>|"
+            return f"|Submarine {self._serial_number} at {self._position}|"
 
 
 def main() -> None:
     system: SubmarineSystem = SubmarineSystem()
+
+    def at_exit():
+        closest: SubmarineInfo = system.get_closest_submarine()
+        furthest: SubmarineInfo = system.get_furthest_submarine()
+        highest: SubmarineInfo = system.get_highest_submarine()
+        lowest: SubmarineInfo = system.get_lowest_submarine()
+        print("SUBMARINE LOCATION INFO:")
+        print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
+
+    atexit.register(at_exit)
+    
+    # system.register_submarine("10053472-25")
+    # system.move_submarine_by_reports("10053472-25")
+    # movement_log = system.get_submarine_movement_log("10053472-25")
+    # for i, entry in enumerate(movement_log, start=1):
+    #     print(f"Entry {i} = {entry}")
 
     for serial_number in system.register_submarines_by_movement_reports():  # ~ 6 000 files
         info: SubmarineInfo = system.move_submarine_by_reports(serial_number)  # ~ 100 000 line file read...
