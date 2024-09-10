@@ -9,9 +9,8 @@ Position = NewType("Position", list[int])
 SubmarineInfo = NewType("SubmarineInfo", str)
 MovementLogEntry = NewType("MovementLogEntry", str)
 MovementLog = NewType("MovementLog", list[MovementLogEntry])
-SensorErrorReport = NewType("SensorErrorReport", str)
 SensorError = NewType("SensorError", dict[str, int])
-SensorErrorMap = NewType("SensorErrorMap", dict[str, SensorError])
+SensorErrorList = NewType("SensorErrorList", list)
 
 
 class SubmarineSystem:
@@ -42,8 +41,8 @@ class SubmarineSystem:
         # Create new submarine
         self._submarines[serial_number] = self._Submarine(serial_number)
 
-    def count_sensor_errors(self, serial_number: SerialNumber) -> SensorErrorReport:
-        """Return information about sensor errors."""
+    def count_sensor_errors(self, serial_number: SerialNumber) -> SensorErrorList:
+        """Returns a list of all types of sensor errors that occured, and how many times they occured, along with how many sensors that failed during said error."""
 
         if not os.path.isdir("Sensordata"):
             raise FileNotFoundError("No 'Sensordata' directory detected.")
@@ -52,7 +51,7 @@ class SubmarineSystem:
         if sub is None:
             raise Exception(f"Submarine '{serial_number}' not found.")
 
-        errors: SensorErrorMap = {}
+        errors: dict[str, SensorError] = {}
         for line in sub.sensor_data:
             if not "0" in line: continue # No error
 
@@ -63,7 +62,7 @@ class SubmarineSystem:
             else:
                 errors[line]["error_occurences"] += 1 # Reoccuring error, add 1
 
-        return f"Reoccuring errors: {errors.values()}"
+        return list( errors.values() )
 
     def get_submarine_movement_log(self, serial_number: SerialNumber) -> MovementLog:
         """Retrieve the latest movement logs for the submarine."""
@@ -219,18 +218,13 @@ def main() -> None:
 
     atexit.register(at_exit, system) # Show location information for the current registered submarines at exit.
 
-    system.register_submarine("10053472-25")
-    errors: SensorErrorReport = system.count_sensor_errors("10053472-25")
-    print(errors)
-
-    # for serial_number in system.register_submarines_by_movement_reports():
-    #     sub: SubmarineInfo = system.lookup_submarine(serial_number)
+    for serial_number in system.register_submarines_by_movement_reports():
+        sub: SubmarineInfo = system.lookup_submarine(serial_number)
         
-    #     system.move_submarine_by_reports(serial_number)
-    #     print(f"Movement reports fetched for {sub}")
+        system.move_submarine_by_reports(serial_number)
+        print(f"Movement reports fetched for {sub}")
 
-    #     sensor_errors: SensorErrorReport = system.count_sensor_errors(serial_number)
-    #     print(f"Sensor errors for {sub} -> {sensor_errors}")
+        system.count_sensor_errors(serial_number)
 
 
 if __name__ == "__main__":
