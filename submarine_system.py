@@ -10,6 +10,8 @@ SubmarineInfo = NewType("SubmarineInfo", str)
 MovementLogEntry = NewType("MovementLogEntry", str)
 MovementLog = NewType("MovementLog", list[MovementLogEntry])
 SensorErrorReport = NewType("SensorErrorReport", str)
+SensorError = NewType("SensorError", dict[str, int])
+SensorErrorMap = NewType("SensorErrorMap", dict[str, SensorError])
 
 
 class SubmarineSystem:
@@ -47,29 +49,21 @@ class SubmarineSystem:
             raise FileNotFoundError("No 'Sensordata' directory detected.")
         
         sub = self._get_sub(serial_number)
-
         if sub is None:
             raise Exception(f"Submarine '{serial_number}' not found.")
 
-        error_types: dict[str, int] = {}
-
+        errors: SensorErrorMap = {}
         for line in sub.sensor_data:
             if not "0" in line: continue # No error
 
-            if not error_types.get(line):
-                error_types[line] = 1 # New error type, register 1
+            if not errors.get(line):
+                sensor_failures = line.count("0") # use str.count, since it is implemented in C, it is faster than looping through the string
+                error: SensorError = dict(sensor_failures=sensor_failures, error_occurences=1)
+                errors[line] = error # New error type, register 1
             else:
-                error_types[line] += 1 # Reoccuring error, add 1
+                errors[line]["error_occurences"] += 1 # Reoccuring error, add 1
 
-        misc_errors = 0 # Amount of errors that only occur once
-        errors_specific = []
-        for i in error_types.values():
-            if i == 1:
-                misc_errors+=1
-            else:
-                errors_specific.append(i)
-
-        return f"Reoccuring errors: {errors_specific}, misc errors: {misc_errors}"
+        return f"Reoccuring errors: {errors.values()}"
 
     def get_submarine_movement_log(self, serial_number: SerialNumber) -> MovementLog:
         """Retrieve the latest movement logs for the submarine."""
@@ -88,7 +82,7 @@ class SubmarineSystem:
             yield serial_number
 
     # TODO: Read entire file at once, practice speed over memory here since files are not as large as sensordata files for example
-    def move_submarine_by_reports(self, serial_number: SerialNumber) -> SubmarineInfo:
+    def move_submarine_by_reports(self, serial_number: SerialNumber) -> None:
         """Read movement reports for this submarine, and move it accordingly"""
 
         sub = self._get_sub(serial_number)
@@ -106,8 +100,6 @@ class SubmarineSystem:
                     continue
 
                 sub.move(split[0], int(split[1]))
-
-        return str(sub)
 
     def get_furthest_submarine(self) -> SubmarineInfo:
         """Get the submarine furthest from the base."""
@@ -212,32 +204,33 @@ class SubmarineSystem:
             return f"|Submarine {self._serial_number} at {self._position}|"
 
 
+def at_exit(system: SubmarineSystem) -> None:
+    """Show location information for the current registered submarines at exit."""
+    closest: SubmarineInfo = system.get_closest_submarine()
+    furthest: SubmarineInfo = system.get_furthest_submarine()
+    highest: SubmarineInfo = system.get_highest_submarine()
+    lowest: SubmarineInfo = system.get_lowest_submarine()
+    print("SUBMARINE LOCATION INFO:")
+    print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
+
+
 def main() -> None:
     system: SubmarineSystem = SubmarineSystem()
 
-    def at_exit():
-        closest: SubmarineInfo = system.get_closest_submarine()
-        furthest: SubmarineInfo = system.get_furthest_submarine()
-        highest: SubmarineInfo = system.get_highest_submarine()
-        lowest: SubmarineInfo = system.get_lowest_submarine()
-        print("SUBMARINE LOCATION INFO:")
-        print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
+    atexit.register(at_exit, system) # Show location information for the current registered submarines at exit.
 
-    atexit.register(at_exit)
-    
-    # system.register_submarine("10053472-25")
-    # system.move_submarine_by_reports("10053472-25")
-    # movement_log = system.get_submarine_movement_log("10053472-25")
-    # for i, entry in enumerate(movement_log, start=1):
-    #     print(f"Entry {i} = {entry}")
+    system.register_submarine("10053472-25")
+    errors: SensorErrorReport = system.count_sensor_errors("10053472-25")
+    print(errors)
 
-    for serial_number in system.register_submarines_by_movement_reports():  # ~ 6 000 files
-        print(system.lookup_submarine(serial_number), "registered")
-        # info: SubmarineInfo = system.move_submarine_by_reports(serial_number)  # ~ 100 000 line file read...
-        # print(f"Movement reports fetched for {info}")
+    # for serial_number in system.register_submarines_by_movement_reports():
+    #     sub: SubmarineInfo = system.lookup_submarine(serial_number)
+        
+    #     system.move_submarine_by_reports(serial_number)
+    #     print(f"Movement reports fetched for {sub}")
 
-        # sensor_errors: SensorErrorReport = system.count_sensor_errors(serial_number)
-        # print(f"Sensor errors for {serial_number} -> {sensor_errors}")
+    #     sensor_errors: SensorErrorReport = system.count_sensor_errors(serial_number)
+    #     print(f"Sensor errors for {sub} -> {sensor_errors}")
 
 
 if __name__ == "__main__":
