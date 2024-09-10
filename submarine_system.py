@@ -9,6 +9,7 @@ Position = NewType("Position", list[int])
 SubmarineInfo = NewType("SubmarineInfo", str)
 MovementLogEntry = NewType("MovementLogEntry", str)
 MovementLog = NewType("MovementLog", list[MovementLogEntry])
+SensorErrorReport = NewType("SensorErrorReport", str)
 
 
 class SubmarineSystem:
@@ -19,11 +20,13 @@ class SubmarineSystem:
 
         self._submarines: dict[SerialNumber, self._Submarine] = {}
 
+    def _get_sub(self, serial_number: SerialNumber) -> "SubmarineSystem._Submarine":
+        return self._submarines.get(serial_number)
+
     def lookup_submarine(self, serial_number: SerialNumber) -> Optional[SubmarineInfo]:
         """Get a submarine by serial number if it exists."""
 
-        sub = self._submarines.get(serial_number)
-        return str(sub)
+        return str( self._get_sub(serial_number) )
 
     def register_submarine(self, serial_number: SerialNumber) -> None:
         """Register a submarine of given 'serial_number'."""
@@ -31,23 +34,46 @@ class SubmarineSystem:
         if not self.serial_number_pattern.match(serial_number):
             raise ValueError("Serial number must be in the format XXXXXXXX-XX")
 
-        if not self._submarines.get(serial_number) is None:
+        if not self._get_sub(serial_number) is None:
             print(f"Warning: Submarine {serial_number} already registered! Overwriting.")
 
         # Create new submarine
         self._submarines[serial_number] = self._Submarine(serial_number)
 
-    def count_sensor_errors(self, serial_number: SerialNumber):
-        """Not implemented."""
+    def count_sensor_errors(self, serial_number: SerialNumber) -> SensorErrorReport:
+        """Return information about sensor errors."""
 
         if not os.path.isdir("Sensordata"):
             raise FileNotFoundError("No 'Sensordata' directory detected.")
         
-        raise NotImplementedError()
+        sub = self._get_sub(serial_number)
+
+        if sub is None:
+            raise Exception(f"Submarine '{serial_number}' not found.")
+
+        error_types: dict[str, int] = {}
+
+        for line in sub.sensor_data:
+            if not "0" in line: continue # No error
+
+            if not error_types.get(line):
+                error_types[line] = 1 # New error type, register 1
+            else:
+                error_types[line] += 1 # Reoccuring error, add 1
+
+        misc_errors = 0 # Amount of errors that only occur once
+        errors_specific = []
+        for i in error_types.values():
+            if i == 1:
+                misc_errors+=1
+            else:
+                errors_specific.append(i)
+
+        return f"Reoccuring errors: {errors_specific}, misc errors: {misc_errors}"
 
     def get_submarine_movement_log(self, serial_number: SerialNumber) -> MovementLog:
         """Retrieve the latest movement logs for the submarine."""
-        sub = self._submarines.get(serial_number)
+        sub = self._get_sub(serial_number)
         return sub.movement_log
     
     def register_submarines_by_movement_reports(self) -> Generator[SerialNumber]:
@@ -61,13 +87,11 @@ class SubmarineSystem:
             self.register_submarine(serial_number)
             yield serial_number
 
+    # TODO: Read entire file at once, practice speed over memory here since files are not as large as sensordata files for example
     def move_submarine_by_reports(self, serial_number: SerialNumber) -> SubmarineInfo:
         """Read movement reports for this submarine, and move it accordingly"""
 
-        if not os.path.isfile(f"MovementReports/{serial_number}.txt"):
-            raise FileNotFoundError("No movement reports file detected.")
-
-        sub = self._submarines.get(serial_number)
+        sub = self._get_sub(serial_number)
 
         if sub is None:
             raise Exception(f"Submarine '{serial_number}' not found.")
@@ -82,7 +106,7 @@ class SubmarineSystem:
                     continue
 
                 sub.move(split[0], int(split[1]))
-        
+
         return str(sub)
 
     def get_furthest_submarine(self) -> SubmarineInfo:
@@ -144,6 +168,15 @@ class SubmarineSystem:
         def movement_log(self) -> MovementLog:
             return self._movement_log
 
+        @property
+        def sensor_data(self) -> Generator[str]:
+            if not os.path.isfile(f"MovementReports/{self.serial_number}.txt"):
+                raise FileNotFoundError("No movement reports file detected.")
+        
+            with open(f"Sensordata/{self.serial_number}.txt") as f:
+                for line in f:
+                    yield line
+
         @staticmethod
         def _log_movement(func: Callable) -> Callable:
             def wrapper(self, dir, dist):
@@ -199,8 +232,12 @@ def main() -> None:
     #     print(f"Entry {i} = {entry}")
 
     for serial_number in system.register_submarines_by_movement_reports():  # ~ 6 000 files
-        info: SubmarineInfo = system.move_submarine_by_reports(serial_number)  # ~ 100 000 line file read...
-        print(f"Movement reports fetched for {info}")
+        print(system.lookup_submarine(serial_number), "registered")
+        # info: SubmarineInfo = system.move_submarine_by_reports(serial_number)  # ~ 100 000 line file read...
+        # print(f"Movement reports fetched for {info}")
+
+        # sensor_errors: SensorErrorReport = system.count_sensor_errors(serial_number)
+        # print(f"Sensor errors for {serial_number} -> {sensor_errors}")
 
 
 if __name__ == "__main__":
