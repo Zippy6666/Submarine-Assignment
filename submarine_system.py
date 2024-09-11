@@ -2,7 +2,7 @@ from collections.abc import Callable, Generator
 from typing import NewType, Optional
 from pathlib import Path
 from collections import deque
-import re, os, atexit
+import re, os
 
 
 SerialNumber = NewType("SerialNumber", str)
@@ -214,18 +214,38 @@ class SubmarineSystem:
 def main() -> None:
     system: SubmarineSystem = SubmarineSystem()
 
+    # Register and move all submarines by their reports
+    print("Registering and moving subs by reports...")
     for serial_number, count, max in system.register_submarines_by_movement_reports():
         system.move_submarine_by_reports(serial_number)
         print(f"{count}/{max} movement reports fetched!")
-    
-    example_sub_serial_num = serial_number
-    
+    print("------------------------------------------------------")
 
+    # Get an example submarine to showcase features on
+    example_sub: SubmarineInfo = system.lookup_submarine(serial_number)
+    
+    # Show example submarine sensor errors
+    print(f"Example {example_sub} sensor errors:")
+    sensor_errors: SensorErrorList = system.count_sensor_errors(serial_number)
+    for i, error in enumerate(sensor_errors, start=1):
+        print(f"Error type {i}: {error}")
+    print("------------------------------------------------------")
+
+    # Show example submarine
+    print(f"Example {example_sub} movement log:")
+    movement_log: MovementLog = system.get_submarine_movement_log(serial_number)
+    for entry in movement_log:
+        print(entry)
+    print("------------------------------------------------------")
+
+    # Show location information
     closest: SubmarineInfo = system.get_closest_submarine()
     furthest: SubmarineInfo = system.get_furthest_submarine()
     highest: SubmarineInfo = system.get_highest_submarine()
     lowest: SubmarineInfo = system.get_lowest_submarine()
+    print("Submarine location information:")
     print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
+    print("------------------------------------------------------")
 
 
 if __name__ == "__main__":
