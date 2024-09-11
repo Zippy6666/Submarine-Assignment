@@ -1,14 +1,15 @@
 from collections.abc import Callable, Generator
 from typing import NewType, Optional
 from pathlib import Path
+from collections import deque
 import re, os, atexit
 
 
 SerialNumber = NewType("SerialNumber", str)
 Position = NewType("Position", list[int])
 SubmarineInfo = NewType("SubmarineInfo", str)
-MovementLogEntry = NewType("MovementLogEntry", str)
-MovementLog = NewType("MovementLog", list[MovementLogEntry])
+MovementLogEntry = NewType("MovementLogEntry", tuple)
+MovementLog = NewType("MovementLog", deque)
 SensorError = NewType("SensorError", dict[str, int])
 SensorErrorList = NewType("SensorErrorList", list)
 
@@ -42,7 +43,7 @@ class SubmarineSystem:
         self._submarines[serial_number] = self._Submarine(serial_number)
 
     def count_sensor_errors(self, serial_number: SerialNumber) -> SensorErrorList:
-        """Returns a list of all types of sensor errors that occured, and how many times they occured, along with how many sensors that failed during said error."""
+        """Returns a list of all types of sensor errors that occured, how many times they occured, and how many sensors that failed during said error/errors."""
 
         if not os.path.isdir("Sensordata"):
             raise FileNotFoundError("No 'Sensordata' directory detected.")
@@ -69,18 +70,20 @@ class SubmarineSystem:
         sub = self._get_sub(serial_number)
         return sub.movement_log
     
-    def register_submarines_by_movement_reports(self) -> Generator[SerialNumber]:
+    def register_submarines_by_movement_reports(self) -> Generator[SerialNumber, int, int]:
         """Register submarines by movement reports. Returns a generator that yields each serial number for the submarines."""
 
         if not os.path.isdir("MovementReports"):
             raise FileNotFoundError("No 'MovementReports' directory detected.")
 
-        for file_name in os.listdir("MovementReports"):
+        list_dir = os.listdir("MovementReports")
+        dir_len = len(list_dir)
+        for i, file_name in enumerate( list_dir, start=1 ):
             serial_number = Path(file_name).stem
             self.register_submarine(serial_number)
-            yield serial_number
+            yield serial_number, i, dir_len
 
-    # TODO: Read entire file at once, practice speed over memory here since files are not as large as sensordata files for example
+    # TODO: Practice speed over memory here since files are not as large as sensordata files
     def move_submarine_by_reports(self, serial_number: SerialNumber) -> None:
         """Read movement reports for this submarine, and move it accordingly"""
 
@@ -89,16 +92,8 @@ class SubmarineSystem:
         if sub is None:
             raise Exception(f"Submarine '{serial_number}' not found.")
 
-        with open(f"MovementReports/{serial_number}.txt") as f:
-            for line in f:
-                split = line.split()
-
-                # This movement report was invalid, skip and continue
-                if len(split) != 2 or not split[1].isdecimal():
-                    print(f"Warning: One movement report for {sub} is invalid. Skipping.")
-                    continue
-
-                sub.move(split[0], int(split[1]))
+        for dir, dist in sub.movement:
+            sub.move(dir, dist)
 
     def get_furthest_submarine(self) -> SubmarineInfo:
         """Get the submarine furthest from the base."""
@@ -140,7 +135,7 @@ class SubmarineSystem:
         def __init__(self, serial_number: SerialNumber) -> None:
             self._serial_number: SerialNumber = serial_number
             self._position: Position = Position([0, 0])
-            self._movement_log: MovementLog = []
+            self._movement_log: MovementLog = deque(maxlen=self._max_logs)
 
         @property
         def serial_number(self) -> SerialNumber:
@@ -161,26 +156,39 @@ class SubmarineSystem:
 
         @property
         def sensor_data(self) -> Generator[str]:
-            if not os.path.isfile(f"MovementReports/{self.serial_number}.txt"):
-                raise FileNotFoundError("No movement reports file detected.")
+            if not os.path.isfile(f"Sensordata/{self.serial_number}.txt"):
+                raise FileNotFoundError("No sensor data file detected.")
         
             with open(f"Sensordata/{self.serial_number}.txt") as f:
                 for line in f:
                     yield line
 
+        @property
+        def movement(self) -> Generator[str, int]:
+            if not os.path.isfile(f"MovementReports/{self.serial_number}.txt"):
+                raise FileNotFoundError("No movement reports file detected.")
+
+            with open(f"MovementReports/{self.serial_number}.txt") as f:
+                for line in f:
+                    split = line.split()
+
+                    # This movement report was invalid, skip and continue
+                    if len(split) != 2 or not split[1].isdigit():
+                        print(f"Warning: One movement report for {self} is invalid. Skipping.")
+                        continue
+
+                    yield split[0], int(split[1])
+
         @staticmethod
         def _log_movement(func: Callable) -> Callable:
             def wrapper(self, dir, dist):
-                old_pos = self.position.copy()
+                old_pos = [self.position[0], self.position[1]]
                 
                 return_value = func(self, dir, dist)
+
+                new_pos = [self.position[0], self.position[1]]
                 
-                log_entry: MovementLogEntry = f"{old_pos} {dir} {dist} {self.position}"
-
-                # Limit the log size
-                if len(self._movement_log) >= self._max_logs:
-                    self._movement_log.pop(0)
-
+                log_entry: MovementLogEntry = (old_pos, dir, dist, new_pos)
                 self._movement_log.append(log_entry)
 
                 return return_value
@@ -203,28 +211,21 @@ class SubmarineSystem:
             return f"|Submarine {self._serial_number} at {self._position}|"
 
 
-def at_exit(system: SubmarineSystem) -> None:
-    """Show location information for the current registered submarines at exit."""
+def main() -> None:
+    system: SubmarineSystem = SubmarineSystem()
+
+    for serial_number, count, max in system.register_submarines_by_movement_reports():
+        system.move_submarine_by_reports(serial_number)
+        print(f"{count}/{max} movement reports fetched!")
+    
+    example_sub_serial_num = serial_number
+    
+
     closest: SubmarineInfo = system.get_closest_submarine()
     furthest: SubmarineInfo = system.get_furthest_submarine()
     highest: SubmarineInfo = system.get_highest_submarine()
     lowest: SubmarineInfo = system.get_lowest_submarine()
-    print("SUBMARINE LOCATION INFO:")
     print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
-
-
-def main() -> None:
-    system: SubmarineSystem = SubmarineSystem()
-
-    atexit.register(at_exit, system) # Show location information for the current registered submarines at exit.
-
-    for serial_number in system.register_submarines_by_movement_reports():
-        sub: SubmarineInfo = system.lookup_submarine(serial_number)
-        
-        system.move_submarine_by_reports(serial_number)
-        print(f"Movement reports fetched for {sub}")
-
-        system.count_sensor_errors(serial_number)
 
 
 if __name__ == "__main__":

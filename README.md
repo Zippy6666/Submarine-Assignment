@@ -14,6 +14,11 @@ An assigment regarding effective python code.
 - Är en privat del av SubmarineSystem klassen.
 - Bör ej instansiearas av användaren, endast genom ett SubmarineSystem objekt.
 
+### Rörelse Loggning
+- Loggningen får inte vara för dyr
+- Använder en deque för att logga rörelser, ett bestämt antal loggar sparas i den, gamla tas bort när den blir full
+- Tupler representerar varje rörelse, visar position innan och efter, samt riktning och avstånd för rörelsen
+
 ## Avgränsningar och fokus
 - Fokuset är att göra en väl skriven OOP kod, inte att det ska vara ett realistiskt system för ubåtar. Däremot, om det fanns en värld där tusentals tvådimisionella ubåtar behövde ett system, vill jag fortfarande att mitt system ska kunna utföra uppdraget.
 
