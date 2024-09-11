@@ -2,7 +2,7 @@ from collections.abc import Callable, Generator
 from typing import NewType, Optional
 from pathlib import Path
 from collections import deque
-import re, os
+import re, os, sys
 
 
 SerialNumber = NewType("SerialNumber", str)
@@ -80,19 +80,18 @@ class SubmarineSystem:
         list_dir = os.listdir("MovementReports")
         return len(list_dir)
         
-    def register_submarines_by_movement_reports(self) -> Generator[SerialNumber, int]:
+    def register_submarines_by_movement_reports(self) -> Generator[SerialNumber]:
         """Register submarines by movement reports. Returns a generator that yields each serial number for the submarines."""
 
         if not os.path.isdir("MovementReports"):
             raise FileNotFoundError("No 'MovementReports' directory detected.")
 
         list_dir = os.listdir("MovementReports")
-        for i, file_name in enumerate( list_dir, start=1 ):
+        for file_name in list_dir:
             serial_number = Path(file_name).stem
             self.register_submarine(serial_number)
-            yield serial_number, i
+            yield serial_number
 
-    # TODO: Practice speed over memory here since files are not as large as sensordata files
     def move_submarine_by_reports(self, serial_number: SerialNumber) -> None:
         """Read movement reports for this submarine, and move it accordingly"""
 
@@ -222,26 +221,24 @@ class SubmarineSystem:
 
 def main() -> None:
     system: SubmarineSystem = SubmarineSystem()
-    submarine_max = system.get_submarine_count_by_movement_reports()
+    submarine_max = ( len(sys.argv) >= 2 and int( sys.argv[1] ) ) or system.get_submarine_count_by_movement_reports()
 
 
     # Register and move all submarines by their reports
     print("Registering and moving subs by reports...")
-    for serial_number, current_count in system.register_submarines_by_movement_reports():
+    for serial_number, current_count in zip( system.register_submarines_by_movement_reports(), range(1, submarine_max+1) ):
         system.move_submarine_by_reports(serial_number)
         sensor_errors: SensorErrorList = system.count_sensor_errors(serial_number)
         print(f"{current_count}/{submarine_max} movement reports and sensor errors fetched!")
-    print("------------------------------------------------------")
-
-
-    # Get an example submarine to showcase features on
     example_sub: SubmarineInfo = system.lookup_submarine(serial_number)
+    print("------------------------------------------------------")
     
 
     # Show example submarine sensor errors
     print(f"Example {example_sub} sensor errors:")
     for i, error in enumerate(sensor_errors, start=1):
-        print(f"Error type {i}: {error}")
+        print(f"Error type {i}: {error}", end=i%3==0 and "\n" or ", ")
+    print()
     print("------------------------------------------------------")
 
 
@@ -261,6 +258,7 @@ def main() -> None:
     lowest: SubmarineInfo = system.get_lowest_submarine()
     print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
     print("------------------------------------------------------")
+    print("Scroll up to see full showcase!")
 
 
 if __name__ == "__main__":
