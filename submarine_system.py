@@ -1,6 +1,5 @@
 from collections.abc import Callable, Generator
 from enum import Enum
-import time
 from typing import NewType, Optional
 from pathlib import Path
 from collections import deque
@@ -14,6 +13,7 @@ MovementLogEntry = NewType("MovementLogEntry", tuple)
 MovementLog = NewType("MovementLog", deque)
 SensorError = NewType("SensorError", dict[str, int])
 SensorErrorList = NewType("SensorErrorList", list)
+Direction = NewType("Direction", str)
 
 
 class Colors(Enum):
@@ -60,9 +60,23 @@ class SubmarineSystem:
 
         # Create new submarine
         self._submarines[serial_number] = self._Submarine(serial_number)
+    
+    def order_torpedo(self, serial_number: SerialNumber, dir: str) -> None:
+        """
+        Orders a submarine to fire a torpedo to the location.
+        Will not fire if it would hit another submarine.
+        """
+
+        sub = self._get_sub(serial_number)
+
+        # sub.fire_torpedo(dir)
 
     def count_sensor_errors(self, serial_number: SerialNumber) -> SensorErrorList:
-        """Returns a list of all types of sensor errors that occured, how many times they occured, and how many sensors that failed during said error/errors."""
+        """
+        Returns a list of all types of sensor errors that occured,
+        how many times they occured,
+        and how many sensors that failed during said error/errors.
+        """
 
         if not os.path.isdir("Sensordata"):
             raise FileNotFoundError("No 'Sensordata' directory detected.")
@@ -100,7 +114,10 @@ class SubmarineSystem:
         return len(list_dir)
         
     def register_submarines_by_movement_reports(self) -> Generator[SerialNumber]:
-        """Register submarines by movement reports. Returns a generator that yields each serial number for the submarines."""
+        """
+        Register submarines by movement reports.
+        Returns a generator that yields each serial number for the submarines.
+        """
 
         if not os.path.isdir("MovementReports"):
             raise FileNotFoundError("No 'MovementReports' directory detected.")
@@ -191,6 +208,9 @@ class SubmarineSystem:
             self._position: Position = Position([0, 0])
             self._movement_log: MovementLog = deque(maxlen=self._max_logs)
 
+        def fire_torpedo(self, dir: Direction) -> None:
+            print(f"{self} fired torpedo {dir}!")
+
         @property
         def serial_number(self) -> SerialNumber:
             return self._serial_number
@@ -250,7 +270,7 @@ class SubmarineSystem:
             return wrapper
 
         @_log_movement
-        def move(self, dir: str, dist: int) -> None:
+        def move(self, dir: Direction, dist: int) -> None:
             match dir:
                 case "up":
                     self._position[0] += dist
@@ -266,8 +286,14 @@ class SubmarineSystem:
 
 
 def main() -> None:
+    """Submarine system showcase."""
+
+
     system: SubmarineSystem = SubmarineSystem()
-    submarine_max = ( len(sys.argv) >= 2 and int( sys.argv[1] ) ) or system.get_submarine_count_by_movement_reports()
+    submarine_max = (
+        ( len(sys.argv) >= 2 and int( sys.argv[1] ) )
+        or system.get_submarine_count_by_movement_reports()
+    )
 
 
     # Register and move all submarines by their reports
@@ -293,7 +319,6 @@ def main() -> None:
 
 
     # Show example submarine movement log
-
     print(f"{Colors.OKCYAN.value}Example {example_sub} movement log:")
     movement_log: MovementLog = system.get_submarine_movement_log(serial_number)
     for entry in movement_log:
@@ -313,6 +338,7 @@ def main() -> None:
     print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
     print(Colors.ENDC.value+"------------------------------------------------------")
 
+
     # Show list of submarines that collided with another submarine
     print(Colors.WARNING.value+"Submarines that collided:")
 
@@ -322,6 +348,7 @@ def main() -> None:
         for info in system.collided_submarines:
             print(info, "collided with another submarine!")
     print(Colors.ENDC.value+"------------------------------------------------------")
+
 
     print("Scroll up to see full showcase!")
 
