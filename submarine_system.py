@@ -3,7 +3,7 @@ from enum import Enum
 from typing import NewType, Optional
 from pathlib import Path
 from collections import deque
-import re, os, sys
+import re, os, sys, random, time
 
 
 SerialNumber = NewType("SerialNumber", str)
@@ -48,6 +48,11 @@ class SubmarineSystem:
         """Get a submarine by serial number if it exists."""
 
         return str( self._get_sub(serial_number) )
+    
+    @property
+    def submarines(self) -> Generator[SerialNumber]:
+        for k in self._submarines:
+            yield k
 
     def register_submarine(self, serial_number: SerialNumber) -> None:
         """Register a submarine of given 'serial_number'."""
@@ -61,16 +66,58 @@ class SubmarineSystem:
         # Create new submarine
         self._submarines[serial_number] = self._Submarine(serial_number)
     
-    def order_torpedo(self, serial_number: SerialNumber, dir: str) -> None:
+    @staticmethod
+    def _prevent_friendly_fire(func: Callable) -> Callable:
+        """Prevents friendly fire when ordering a torpedo."""
+
+        def wrapper(system: "SubmarineSystem", serial_number: SerialNumber, dir: Direction) -> bool:
+            friendly_fire = False
+            firing_sub = system._get_sub(serial_number)
+
+            match dir:
+                case "up":
+                    for _, sub in system._submarines.items():
+                        if sub==firing_sub: continue
+                        if firing_sub.position[1] == sub.position[1] and sub.position[0] >= firing_sub.position[0]:
+                            friendly_fire = True
+                            break
+                case "down":
+                    for _, sub in system._submarines.items():
+                        if sub==firing_sub: continue
+                        if firing_sub.position[1] == sub.position[1] and sub.position[0] <= firing_sub.position[0]:
+                            friendly_fire = True
+                            break
+                case "forward":
+                    for _, sub in system._submarines.items():
+                        if sub==firing_sub: continue
+                        if firing_sub.position[0] == sub.position[0] and sub.position[1] >= firing_sub.position[1]:
+                            friendly_fire = True
+                            break
+            
+            if friendly_fire:
+                print(f"Warning: Torpedo order for {firing_sub} failed {dir} - friendly fire towards {sub}!")
+                return False
+            else:
+                return func(system, serial_number, dir)
+
+        return wrapper
+    
+    @_prevent_friendly_fire
+    def order_torpedo(self, serial_number: SerialNumber, dir: Direction) -> bool:
         """
         Orders a submarine to fire a torpedo to the location.
         Will not fire if it would hit another submarine.
         """
 
         sub = self._get_sub(serial_number)
-
-        # sub.fire_torpedo(dir)
-
+        sub.fire_torpedo(dir)
+        return True
+    
+    def torpedo_graphic(self) -> None:
+        for i in range(100):
+            print("--------------------------------------------", end="\r")
+            time.sleep(0.1)
+            
     def count_sensor_errors(self, serial_number: SerialNumber) -> SensorErrorList:
         """
         Returns a list of all types of sensor errors that occured,
@@ -209,8 +256,9 @@ class SubmarineSystem:
             self._movement_log: MovementLog = deque(maxlen=self._max_logs)
 
         def fire_torpedo(self, dir: Direction) -> None:
-            print(f"{self} fired torpedo {dir}!")
-
+            # print(f"{self} fired torpedo {dir}!")
+            ...
+            
         @property
         def serial_number(self) -> SerialNumber:
             return self._serial_number
@@ -347,6 +395,25 @@ def main() -> None:
     else:
         for info in system.collided_submarines:
             print(info, "collided with another submarine!")
+    print(Colors.ENDC.value+"------------------------------------------------------")
+
+
+    # Fire torpedos for all submarines:
+    print(Colors.BOLD.value+"Ordering torpedos!")
+
+    successful_torpedos = submarine_max
+
+    for serial_number in system.submarines:
+        success = system.order_torpedo(serial_number, random.choice(("up", "down", "forward")))
+
+        if not success:
+            successful_torpedos-=1
+    
+    # TODO: Some cool graphics
+    system.torpedo_graphic()
+    
+    print(f"{successful_torpedos} torpedos fired successfully!")
+    
     print(Colors.ENDC.value+"------------------------------------------------------")
 
 
