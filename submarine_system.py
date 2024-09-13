@@ -114,10 +114,13 @@ class SubmarineSystem:
         return True
     
     def torpedo_graphic(self) -> None:
-        for i in range(100):
-            print("--------------------------------------------", end="\r")
-            time.sleep(0.1)
-            
+        for _ in range(3):
+            steps = 40
+            for i in range(steps):
+                print(" "*(steps-i) + "c=={ "+"-"*i, end="\r")
+                time.sleep(0.02)
+            print()
+        
     def count_sensor_errors(self, serial_number: SerialNumber) -> SensorErrorList:
         """
         Returns a list of all types of sensor errors that occured,
@@ -160,10 +163,9 @@ class SubmarineSystem:
         list_dir = os.listdir("MovementReports")
         return len(list_dir)
         
-    def register_submarines_by_movement_reports(self) -> Generator[SerialNumber]:
+    def register_submarines_by_movement_reports(self):
         """
         Register submarines by movement reports.
-        Returns a generator that yields each serial number for the submarines.
         """
 
         if not os.path.isdir("MovementReports"):
@@ -173,7 +175,6 @@ class SubmarineSystem:
         for file_name in list_dir:
             serial_number = Path(file_name).stem
             self.register_submarine(serial_number)
-            yield serial_number
 
     @staticmethod
     def _collision_logger(func: Callable) -> Callable:
@@ -256,8 +257,7 @@ class SubmarineSystem:
             self._movement_log: MovementLog = deque(maxlen=self._max_logs)
 
         def fire_torpedo(self, dir: Direction) -> None:
-            # print(f"{self} fired torpedo {dir}!")
-            ...
+            """Torpedo firing logic here..."""
             
         @property
         def serial_number(self) -> SerialNumber:
@@ -336,46 +336,43 @@ class SubmarineSystem:
 def main() -> None:
     """Submarine system showcase."""
 
-
     system: SubmarineSystem = SubmarineSystem()
     submarine_max = (
         ( len(sys.argv) >= 2 and int( sys.argv[1] ) )
         or system.get_submarine_count_by_movement_reports()
     )
 
+    print(Colors.ITALIC.value+"Registering subs by reports...")
+    system.register_submarines_by_movement_reports()
 
-    # Register and move all submarines by their reports
-    print(Colors.ITALIC.value+"Registering and moving subs by reports...")
-
-    for serial_number, current_count in zip( system.register_submarines_by_movement_reports(), range(1, submarine_max+1) ):
+    print("Moving subs by reports...")
+    for serial_number, i in zip( system.submarines, range(submarine_max) ):
         system.move_submarine_by_reports(serial_number)
-        print(f"{current_count}/{submarine_max} movement reports fetched!")
+        print(f"{i+1}/{submarine_max} movement reports progress...")
+
+    print("Counting sensor errors for each submarine...")
+    for serial_number, i in zip( system.submarines, range(submarine_max) ):
+        sensor_errors: SensorErrorList = system.count_sensor_errors(serial_number)
+        print(f"{i+1}/{submarine_max} sensor error progress...")
 
     print(Colors.ENDC.value+"------------------------------------------------------")
 
-
-    # Show example submarine sensor errors
     example_sub: SubmarineInfo = system.lookup_submarine(serial_number)
-    example_sensor_errors: SensorErrorList = system.count_sensor_errors(serial_number)
-
     print(f"{Colors.FAIL.value}Example {example_sub} sensor errors:")
-    for i, error in enumerate(example_sensor_errors, start=1):
+
+    for i, error in enumerate(sensor_errors, start=1):
         print(f"Error type {i}: {error}", end=i%3==0 and "\n" or ", ")
     print()
-
     print(Colors.ENDC.value+"------------------------------------------------------")
 
-
-    # Show example submarine movement log
     print(f"{Colors.OKCYAN.value}Example {example_sub} movement log:")
+
     movement_log: MovementLog = system.get_submarine_movement_log(serial_number)
+
     for entry in movement_log:
         print(entry)
-
     print(Colors.ENDC.value+"------------------------------------------------------")
 
-
-    # Show location information
     print(Colors.OKGREEN.value+"Submarine location information:")
 
     closest: SubmarineInfo = system.get_closest_submarine()
@@ -386,8 +383,6 @@ def main() -> None:
     print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
     print(Colors.ENDC.value+"------------------------------------------------------")
 
-
-    # Show list of submarines that collided with another submarine
     print(Colors.WARNING.value+"Submarines that collided:")
 
     if len(system.collided_submarines) == 0:
@@ -397,25 +392,20 @@ def main() -> None:
             print(info, "collided with another submarine!")
     print(Colors.ENDC.value+"------------------------------------------------------")
 
-
-    # Fire torpedos for all submarines:
-    print(Colors.BOLD.value+"Ordering torpedos!")
+    print(Colors.BOLD.value+"Ordering torpedos in random directions!")
+    system.torpedo_graphic()
 
     successful_torpedos = submarine_max
 
-    for serial_number in system.submarines:
+    for serial_number, i in zip( system.submarines, range(submarine_max) ):
         success = system.order_torpedo(serial_number, random.choice(("up", "down", "forward")))
 
         if not success:
             successful_torpedos-=1
     
-    # TODO: Some cool graphics
-    system.torpedo_graphic()
-    
     print(f"{successful_torpedos} torpedos fired successfully!")
     
     print(Colors.ENDC.value+"------------------------------------------------------")
-
 
     print("Scroll up to see full showcase!")
 
