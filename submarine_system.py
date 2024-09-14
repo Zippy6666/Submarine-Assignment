@@ -16,7 +16,7 @@ SensorErrorList = NewType("SensorErrorList", list)
 Direction = NewType("Direction", str)
 
 
-class Colors(Enum):
+class _Colors(Enum):
     HEADER = "\033[95m"
     OKBLUE = "\033[94m"
     OKCYAN = "\033[96m"
@@ -333,82 +333,101 @@ class SubmarineSystem:
             return f"|Submarine {self._serial_number} at {self._position}|"
 
 
-def main() -> None:
-    """Submarine system showcase."""
-
-    system: SubmarineSystem = SubmarineSystem()
-    submarine_max = (
-        ( len(sys.argv) >= 2 and int( sys.argv[1] ) )
-        or system.get_submarine_count_by_movement_reports()
-    )
-
-    print(Colors.ITALIC.value+"Registering subs by reports...")
-    system.register_submarines_by_movement_reports()
-
-    print("Moving subs by reports...")
-    for serial_number, i in zip( system.submarines, range(submarine_max) ):
-        system.move_submarine_by_reports(serial_number)
-        print(f"{i+1}/{submarine_max} movement reports progress...")
-
-    print("Counting sensor errors for each submarine...")
-    for serial_number, i in zip( system.submarines, range(submarine_max) ):
-        sensor_errors: SensorErrorList = system.count_sensor_errors(serial_number)
-        print(f"{i+1}/{submarine_max} sensor error progress...")
-
-    print(Colors.ENDC.value+"------------------------------------------------------")
-
-    example_sub: SubmarineInfo = system.lookup_submarine(serial_number)
-    print(f"{Colors.FAIL.value}Example {example_sub} sensor errors:")
-
-    for i, error in enumerate(sensor_errors, start=1):
-        print(f"Error type {i}: {error}", end=i%3==0 and "\n" or ", ")
-    print()
-    print(Colors.ENDC.value+"------------------------------------------------------")
-
-    print(f"{Colors.OKCYAN.value}Example {example_sub} movement log:")
-
-    movement_log: MovementLog = system.get_submarine_movement_log(serial_number)
-
-    for entry in movement_log:
-        print(entry)
-    print(Colors.ENDC.value+"------------------------------------------------------")
-
-    print(Colors.OKGREEN.value+"Submarine location information:")
-
-    closest: SubmarineInfo = system.get_closest_submarine()
-    furthest: SubmarineInfo = system.get_furthest_submarine()
-    highest: SubmarineInfo = system.get_highest_submarine()
-    lowest: SubmarineInfo = system.get_lowest_submarine()
-
-    print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
-    print(Colors.ENDC.value+"------------------------------------------------------")
-
-    print(Colors.WARNING.value+"Submarines that collided:")
-
-    if len(system.collided_submarines) == 0:
-        print("None.")
-    else:
-        for info in system.collided_submarines:
-            print(info, "collided with another submarine!")
-    print(Colors.ENDC.value+"------------------------------------------------------")
-
-    print(Colors.BOLD.value+"Ordering torpedos in random directions!")
-    system.torpedo_graphic()
-
-    successful_torpedos = submarine_max
-
-    for serial_number, i in zip( system.submarines, range(submarine_max) ):
-        success = system.order_torpedo(serial_number, random.choice(("up", "down", "forward")))
-
-        if not success:
-            successful_torpedos-=1
-    
-    print(f"{successful_torpedos} torpedos fired successfully!")
-    
-    print(Colors.ENDC.value+"------------------------------------------------------")
-
-    print("Scroll up to see full showcase!")
-
 
 if __name__ == "__main__":
-    main()
+    """Submarine system showcase!"""
+
+    system: SubmarineSystem = SubmarineSystem()
+    system.register_submarines_by_movement_reports()
+    submarine_test_limit = ( len(sys.argv) >= 2 and int( sys.argv[1] ) or system.get_submarine_count_by_movement_reports())
+
+
+    def _pretty_print(text: str, color: str) -> Callable:
+        def decorator(func: Callable) -> Callable:
+            def wrapper(*args, **kwargs):
+                # Print the starting text with the chosen color
+                print(color + text)
+                
+                # Execute the wrapped function and capture its return value
+                return_value = func(*args, **kwargs)
+                
+                # Print the separator line and reset color
+                print("-" * 20 + _Colors.ENDC)
+                
+                # Return whatever the original function returns
+                return return_value
+            
+            return wrapper
+        return decorator
+    
+
+    @_pretty_print("Moving submarine by reports...", _Colors.ITALIC.value)
+    def _move_submarines() -> SerialNumber:
+        for serial_number, i in zip( system.submarines, range(submarine_test_limit) ):
+            system.move_submarine_by_reports(serial_number)
+            print(f"{i+1}/{submarine_test_limit} movement reports progress...")
+        return serial_number
+    
+
+    @_pretty_print("Counting sensor errors...", _Colors.ITALIC.value)
+    def _count_sensor_errors() -> tuple[SerialNumber, SensorErrorList]:
+        for serial_number, i in zip( system.submarines, range(submarine_test_limit) ):
+            sensor_errors: SensorErrorList = system.count_sensor_errors(serial_number)
+            print(f"{i+1}/{submarine_test_limit} sensor error progress...")  
+        return serial_number, sensor_errors
+
+
+    @_pretty_print("Showing sensor errors for 1 submarine...", _Colors.FAIL.value)
+    def _show_sensor_errors(serial_number: SerialNumber, sensor_errors: SensorErrorList) -> None:
+        print(system.lookup_submarine(serial_number), "sensor errors:")
+        for i, error in enumerate(sensor_errors, start=1):
+            print(f"Error type {i}: {error}", end=i%3==0 and "\n" or ", ")
+        print()
+
+
+    @_pretty_print("Showing movement log for 1 submarine...", _Colors.OKCYAN.value)
+    def _show_movement_log(serial_number: SerialNumber) -> None:
+        print(system.lookup_submarine(serial_number))
+        movement_log: MovementLog = system.get_submarine_movement_log(serial_number)
+        for entry in movement_log:
+            print(entry)
+
+
+    @_pretty_print("Misc location info: ", _Colors.OKBLUE.value)
+    def _show_location_info() -> None:
+        closest: SubmarineInfo = system.get_closest_submarine()
+        furthest: SubmarineInfo = system.get_furthest_submarine()
+        highest: SubmarineInfo = system.get_highest_submarine()
+        lowest: SubmarineInfo = system.get_lowest_submarine()
+
+        print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
+
+
+    def _show_collisions() -> None:
+        ...
+
+
+    def _order_random_torpedos() -> None:
+        system.torpedo_graphic()
+
+        successful_torpedos = submarine_test_limit
+
+        for serial_number, i in zip( system.submarines, range(submarine_test_limit) ):
+            success = system.order_torpedo(serial_number, random.choice(("up", "down", "forward")))
+
+            if not success:
+                successful_torpedos-=1
+        
+        print(f"{successful_torpedos} torpedos fired successfully!")
+    
+
+    serial_number = _move_submarines()
+    _show_movement_log(serial_number)
+    _show_location_info()
+
+    serial_number, errors = _count_sensor_errors()
+    _show_sensor_errors(serial_number, errors)
+
+    _order_random_torpedos()
+
+    print("Scroll up to see full showcase!")
