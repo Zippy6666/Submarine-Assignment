@@ -1,6 +1,6 @@
 from collections.abc import Callable, Generator
 from enum import Enum
-from typing import NewType, Optional
+from typing import NewType, Optional, Union
 from pathlib import Path
 from collections import deque
 import re, os, sys, random, time
@@ -14,19 +14,6 @@ MovementLog = NewType("MovementLog", deque)
 SensorError = NewType("SensorError", dict[str, int])
 SensorErrorList = NewType("SensorErrorList", list)
 Direction = NewType("Direction", str)
-
-
-class _Colors(Enum):
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKCYAN = "\033[96m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-    ITALIC = "\033[3m"
 
 
 class SubmarineSystem:
@@ -70,7 +57,7 @@ class SubmarineSystem:
     def _prevent_friendly_fire(func: Callable) -> Callable:
         """Prevents friendly fire when ordering a torpedo."""
 
-        def wrapper(system: "SubmarineSystem", serial_number: SerialNumber, dir: Direction) -> bool:
+        def wrapper(system: "SubmarineSystem", serial_number: SerialNumber, dir: Direction) -> Union[bool, SubmarineInfo]:
             friendly_fire = False
             firing_sub = system._get_sub(serial_number)
 
@@ -95,18 +82,19 @@ class SubmarineSystem:
                             break
             
             if friendly_fire:
-                print(f"Warning: Torpedo order for {firing_sub} failed {dir} - friendly fire towards {sub}!")
-                return False
+                return sub
             else:
                 return func(system, serial_number, dir)
 
         return wrapper
     
-    @_prevent_friendly_fire
-    def order_torpedo(self, serial_number: SerialNumber, dir: Direction) -> bool:
+    @_prevent_friendly_fire # This can cause this function to return SubmarineInfo instead of bool
+    def order_torpedo(self, serial_number: SerialNumber, dir: Direction) -> Union[bool, SubmarineInfo]:
         """
         Orders a submarine to fire a torpedo to the location.
+
         Will not fire if it would hit another submarine.
+        Returns the submarine it would've hit in that case.
         """
 
         sub = self._get_sub(serial_number)
@@ -249,12 +237,12 @@ class SubmarineSystem:
         return sorted(self._submarines.values(), key=lambda submarine: submarine.position[0])
 
     class _Submarine:
-        _max_logs = 100
+        _max_move_logs = 100
 
         def __init__(self, serial_number: SerialNumber) -> None:
             self._serial_number: SerialNumber = serial_number
             self._position: Position = Position([0, 0])
-            self._movement_log: MovementLog = deque(maxlen=self._max_logs)
+            self._movement_log: MovementLog = deque(maxlen=self._max_move_logs)
 
         def fire_torpedo(self, dir: Direction) -> None:
             """Torpedo firing logic here..."""
@@ -342,19 +330,28 @@ if __name__ == "__main__":
     submarine_test_limit = ( len(sys.argv) >= 2 and int( sys.argv[1] ) or system.get_submarine_count_by_movement_reports())
 
 
+    class _Colors(Enum):
+        HEADER = "\033[95m"
+        OKBLUE = "\033[94m"
+        OKCYAN = "\033[96m"
+        OKGREEN = "\033[92m"
+        WARNING = "\033[93m"
+        FAIL = "\033[91m"
+        ENDC = "\033[0m"
+        BOLD = "\033[1m"
+        UNDERLINE = "\033[4m"
+        ITALIC = "\033[3m"
+
+
     def _pretty_print(text: str, color: str) -> Callable:
         def decorator(func: Callable) -> Callable:
             def wrapper(*args, **kwargs):
-                # Print the starting text with the chosen color
                 print(color + text)
-                
-                # Execute the wrapped function and capture its return value
+
                 return_value = func(*args, **kwargs)
                 
-                # Print the separator line and reset color
-                print("-" * 20 + _Colors.ENDC)
-                
-                # Return whatever the original function returns
+                print("-" * 20 + _Colors.ENDC.value)
+
                 return return_value
             
             return wrapper
@@ -393,7 +390,7 @@ if __name__ == "__main__":
             print(entry)
 
 
-    @_pretty_print("Misc location info: ", _Colors.OKBLUE.value)
+    @_pretty_print("Misc location info:", _Colors.OKBLUE.value)
     def _show_location_info() -> None:
         closest: SubmarineInfo = system.get_closest_submarine()
         furthest: SubmarineInfo = system.get_furthest_submarine()
@@ -403,31 +400,45 @@ if __name__ == "__main__":
         print(f"Closest: {closest}, furthest: {furthest}, highest: {highest}, lowest: {lowest}")
 
 
+    @_pretty_print("List of subs that collided:", _Colors.WARNING.value)
     def _show_collisions() -> None:
-        ...
+        if len(system.collided_submarines) == 0:
+            print("None.")
+            return
+
+        for info in system.collided_submarines:
+            print(info)
 
 
+    @_pretty_print("Ordering torpedos...", _Colors.BOLD.value)
     def _order_random_torpedos() -> None:
         system.torpedo_graphic()
 
-        successful_torpedos = submarine_test_limit
+        torpedo_failures = 0
+        torpedo_failure_prints = 0
+        max_torpedo_failure_prints = 50
+        for serial_number, _ in zip( system.submarines, range(submarine_test_limit) ):
+            direction = random.choice(("up", "down", "forward"))
+            return_value = system.order_torpedo(serial_number, direction)
 
-        for serial_number, i in zip( system.submarines, range(submarine_test_limit) ):
-            success = system.order_torpedo(serial_number, random.choice(("up", "down", "forward")))
-
-            if not success:
-                successful_torpedos-=1
+            if not return_value is True:
+                torpedo_failures+=1
+                if torpedo_failure_prints < max_torpedo_failure_prints:
+                    print(f"{system.lookup_submarine(serial_number)} fire torpedo failed {direction} - friendly fire towards {return_value}!")
+                    torpedo_failure_prints += 1
         
-        print(f"{successful_torpedos} torpedos fired successfully!")
+        if torpedo_failure_prints < torpedo_failures:
+            print(f"{torpedo_failures-torpedo_failure_prints} other submarines failed firing torpedos!")
+
+        print(f"{submarine_test_limit-torpedo_failures} torpedos fired successfully!")
     
 
-    serial_number = _move_submarines()
-    _show_movement_log(serial_number)
+    sub_sn_sensor_test, sensor_errors = _count_sensor_errors()
+    sub_sn_movelog_test = _move_submarines()
+
+    _show_sensor_errors(sub_sn_sensor_test, sensor_errors)
+    _show_movement_log(sub_sn_movelog_test)
     _show_location_info()
-
-    serial_number, errors = _count_sensor_errors()
-    _show_sensor_errors(serial_number, errors)
-
+    _show_collisions()
     _order_random_torpedos()
-
     print("Scroll up to see full showcase!")
