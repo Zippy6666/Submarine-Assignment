@@ -430,6 +430,8 @@ if __name__ == "__main__":
             print(f"Error type {i}: {error}", end=i%3==0 and "\n" or ", ")
         print()
 
+        print("^^^^^^^^^^^ Sensor error log")
+
 
     @_pretty_print("Showing movement log for 1 submarine...", _Colors.OKCYAN.value)
     def _show_movement_log(serial_number: SerialNumber) -> None:
@@ -437,6 +439,8 @@ if __name__ == "__main__":
         movement_log: MovementLog = system.get_submarine_movement_log(serial_number)
         for entry in movement_log:
             print(entry)
+        
+        print("^^^^^^^^^^^ Movement log")
 
 
     @_pretty_print("Misc location info:", _Colors.OKBLUE.value)
@@ -457,6 +461,8 @@ if __name__ == "__main__":
 
         for info in system.collided_submarines:
             print(info)
+
+        print("^^^^^^^^^^^ Collision log")
 
 
     @_pretty_print("Ordering torpedos...", _Colors.BOLD.value)
@@ -499,7 +505,6 @@ if __name__ == "__main__":
 
     sub_sn_sensor_test, sensor_errors = _count_sensor_errors()
     sub_sn_movelog_test = _move_submarines()
-
 
     _show_sensor_errors(sub_sn_sensor_test, sensor_errors)
     time.sleep(1)
