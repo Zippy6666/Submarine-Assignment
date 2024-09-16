@@ -3,7 +3,8 @@ from enum import Enum
 from typing import NewType, Optional, Union
 from pathlib import Path
 from collections import deque
-import re, os, sys, random, time
+from datetime import date
+import re, os, sys, random, time, hashlib
 
 
 SerialNumber = NewType("SerialNumber", str)
@@ -52,7 +53,22 @@ class SubmarineSystem:
 
         # Create new submarine
         self._submarines[serial_number] = self._Submarine(serial_number)
-    
+
+    def activate_nuke(self, serial_number: SerialNumber, auth_string: str) -> None:
+        """
+        Activate the nuke for the supplied submarine.
+        Will fail if the user is not authenticated.
+        """
+
+        sha = hashlib.sha256( auth_string.encode() )
+        sub = self._get_sub(serial_number)
+        success = sub.ready_nuke(sha.hexdigest())
+
+        if success:
+            print(f"Successfully activated nuke for {sub}!")
+        else:
+            print(f"Could not ready nuke for {sub}, wrong auth string!")
+ 
     @staticmethod
     def _prevent_friendly_fire(func: Callable) -> Callable:
         """Prevents friendly fire when ordering a torpedo."""
@@ -244,8 +260,41 @@ class SubmarineSystem:
             self._position: Position = Position([0, 0])
             self._movement_log: MovementLog = deque(maxlen=self._max_move_logs)
 
-        def fire_torpedo(self, dir: Direction) -> None:
+        def fire_torpedo(self, _: Direction) -> None:
             """Torpedo firing logic here..."""
+
+        def _find_my_secret_key(self) -> str:
+            with open("Secrets/SecretKEY.txt") as f:
+                for line in f:
+                    split = line.split(":")
+                    if split[0] == self.serial_number:
+                        return split[1].strip("\n")
+            raise LookupError(f"Could not find {self} secret key.")
+        
+        def _find_my_activation_code(self) -> str:
+            with open("Secrets/ActivationCodes.txt") as f:
+                for line in f:
+                    split = line.split(":")
+                    if split[0] == self.serial_number:
+                        return split[1].strip("\n")
+            raise LookupError(f"Could not find {self} activation code.")
+
+        def ready_nuke(self, hex_str: str) -> bool:
+            if not os.path.isfile("Secrets/ActivationCodes.txt"):
+                raise FileNotFoundError("'ActivationCodes.txt' not found.")
+            
+            if not os.path.isfile("Secrets/SecretKEY.txt"):
+                raise FileNotFoundError("'SecretKEY.txt' not found.")
+
+            date_now_str = str( date.today() )
+            key = self._find_my_secret_key()
+            code = self._find_my_activation_code()
+            combined_string = date_now_str+key+code
+            sha = hashlib.sha256( combined_string.encode() )
+
+            # Ready nuke logic here...
+
+            return sha.hexdigest()==hex_str
             
         @property
         def serial_number(self) -> SerialNumber:
@@ -431,14 +480,46 @@ if __name__ == "__main__":
             print(f"{torpedo_failures-torpedo_failure_prints} other submarines failed firing torpedos!")
 
         print(f"{submarine_test_limit-torpedo_failures} torpedos fired successfully!")
-    
+
+
+    @_pretty_print("TESTING NUKES!", _Colors.WARNING.value)
+    def _test_nukes(serial_number: SerialNumber, auth_string: str) -> None:
+        sub: SubmarineInfo = system.lookup_submarine(serial_number)
+
+        if sub is None:
+            raise LookupError(f"Could not find submarine with serial number '{serial_number}'.")
+        
+        print(f"Testing on {sub}...")
+        print(f"Trying to authenticate with '{auth_string}'...")
+
+        time.sleep(2)
+
+        system.activate_nuke(serial_number, auth_string)
+
 
     sub_sn_sensor_test, sensor_errors = _count_sensor_errors()
     sub_sn_movelog_test = _move_submarines()
 
+
     _show_sensor_errors(sub_sn_sensor_test, sensor_errors)
+    time.sleep(1)
+
     _show_movement_log(sub_sn_movelog_test)
-    _show_location_info()
+    time.sleep(1)
+
     _show_collisions()
+    time.sleep(1)
+    
+    _show_location_info()
+    time.sleep(2)
+
     _order_random_torpedos()
+    time.sleep(2)
+
+    date_now_str = str( date.today() )
+    secret_key = "Vvkn0pAqXmGEeNRAj2h03C3vI2x"
+    activation_code = "RpojkncM1F1rr9xiiE"
+    _test_nukes("41158662-03", date_now_str+secret_key+activation_code)
+
+    time.sleep(2)
     print("Scroll up to see full showcase!")
