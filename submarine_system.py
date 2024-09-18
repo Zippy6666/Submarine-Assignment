@@ -29,6 +29,22 @@ class SubmarineSystem:
         self._occupied_positions: dict[tuple, bool] = {}
         self._collided_submarines: list[SubmarineInfo] = []
 
+    @property
+    def submarines(self) -> Generator[SerialNumber]:
+        for k in self._submarines:
+            yield k
+
+    @property
+    def max_move_logs(self) -> int:
+        """The maximum amount of movement log entries a submarine can have."""
+        return self._Submarine.max_move_logs
+
+    @property
+    def collided_submarines(self) -> list[SubmarineInfo]:
+        """Current list of submarines that have collided."""
+
+        return self._collided_submarines
+    
     def _get_sub(self, serial_number: SerialNumber) -> "SubmarineSystem._Submarine":
         return self._submarines.get(serial_number)
 
@@ -37,11 +53,6 @@ class SubmarineSystem:
 
         return str( self._get_sub(serial_number) )
     
-    @property
-    def submarines(self) -> Generator[SerialNumber]:
-        for k in self._submarines:
-            yield k
-
     def register_submarine(self, serial_number: SerialNumber) -> None:
         """Register a submarine of given 'serial_number'."""
 
@@ -118,6 +129,7 @@ class SubmarineSystem:
         return True
     
     def torpedo_graphic(self) -> None:
+        """Fancy torpedo graphics!!"""
         for _ in range(3):
             steps = 40
             for i in range(steps):
@@ -211,12 +223,6 @@ class SubmarineSystem:
 
         for dir, dist in sub.movement:
             sub.move(dir, dist)
-    
-    @property
-    def collided_submarines(self) -> list[SubmarineInfo]:
-        """Current list of submarines that have collided."""
-
-        return self._collided_submarines
 
     def get_furthest_submarine(self) -> SubmarineInfo:
         """Get the submarine furthest from the base."""
@@ -253,12 +259,12 @@ class SubmarineSystem:
         return sorted(self._submarines.values(), key=lambda submarine: submarine.position[0])
 
     class _Submarine:
-        _max_move_logs = 100
+        max_move_logs = 50
 
         def __init__(self, serial_number: SerialNumber) -> None:
             self._serial_number: SerialNumber = serial_number
             self._position: Position = Position([0, 0])
-            self._movement_log: MovementLog = deque(maxlen=self._max_move_logs)
+            self._movement_log: MovementLog = deque(maxlen=self.max_move_logs)
 
         def fire_torpedo(self, _: Direction) -> None:
             """Torpedo firing logic here..."""
@@ -435,7 +441,8 @@ if __name__ == "__main__":
 
     @_pretty_print("Showing movement log for 1 submarine...", _Colors.OKCYAN.value)
     def _show_movement_log(serial_number: SerialNumber) -> None:
-        print(system.lookup_submarine(serial_number))
+        print(f"{system.lookup_submarine(serial_number)} ({system.max_move_logs} entries)")
+        
         movement_log: MovementLog = system.get_submarine_movement_log(serial_number)
         for entry in movement_log:
             print(entry)
@@ -516,7 +523,7 @@ if __name__ == "__main__":
     time.sleep(1)
     
     _show_location_info()
-    time.sleep(2)
+    time.sleep(1)
 
     _order_random_torpedos()
     time.sleep(2)
