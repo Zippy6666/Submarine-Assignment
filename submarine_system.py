@@ -181,6 +181,10 @@ class SubmarineSystem:
         """Retrieve the latest movement logs for the submarine."""
 
         sub = self._get_sub(serial_number)
+
+        if sub is None:
+            raise LookupError(f"Submarine '{serial_number}' not found.")
+        
         return sub.movement_log
     
     def get_submarine_count_by_movement_reports(self) -> int:
@@ -232,7 +236,7 @@ class SubmarineSystem:
         sub = self._get_sub(serial_number)
 
         if sub is None:
-            raise Exception(f"Submarine '{serial_number}' not found.")
+            raise LookupError(f"Submarine '{serial_number}' not found.")
 
         for dir, dist in sub.movement:
             sub.move(dir, dist)
@@ -298,16 +302,20 @@ class SubmarineSystem:
             with open("Secrets/SecretKEY.txt") as f:
                 for line in f:
                     split = line.split(":")
+                    
                     if split[0] == self.serial_number:
                         return split[1].strip("\n")
+                    
             raise LookupError(f"Could not find {self} secret key.")
         
         def _find_my_activation_code(self) -> str:
             with open("Secrets/ActivationCodes.txt") as f:
                 for line in f:
                     split = line.split(":")
+
                     if split[0] == self.serial_number:
                         return split[1].strip("\n")
+                    
             raise LookupError(f"Could not find {self} activation code.")
 
         def ready_nuke(self, hex_str: str) -> bool:
