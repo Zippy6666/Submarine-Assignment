@@ -1,3 +1,4 @@
+from collections import deque
 from submarine_system import SubmarineSystem
 from types import GeneratorType
 import unittest
@@ -48,14 +49,31 @@ class SubSysTest(unittest.TestCase):
             self.system.order_torpedo("123", "up")
     
     def test_count_sensor_errors_returns_valid_list(self):
-        ...
-    
+        self.system.register_submarine("78532608-69")
+
+        sensor_errors = self.system.count_sensor_errors("78532608-69")
+        self.assertIsInstance(sensor_errors, list)
+
+        for error_entry in sensor_errors:
+            self.assertIsInstance(error_entry, dict)
+        
+        self.system._submarines.clear()
+
     def test_count_sensor_errors_on_nonexistant_submarine(self):
         with self.assertRaises(LookupError):
             self.system.count_sensor_errors("123")
     
     def test_get_submarine_movement_log_returns_valid_deque(self):
-        ...
+        self.system.register_submarine("78532608-69")
+        self.system.move_submarine_by_reports("78532608-69")
+
+        movement_log = self.system.get_submarine_movement_log("78532608-69")
+        self.assertIsInstance(movement_log, deque)
+
+        for entry in movement_log:
+            self.assertIsInstance(entry, tuple)
+        
+        self.system._submarines.clear()
 
     def test_get_sub_move_log_from_nonexistant_submarine(self):
         with self.assertRaises(LookupError):
@@ -66,6 +84,9 @@ class SubSysTest(unittest.TestCase):
             self.system.move_submarine_by_reports("123")
     
     def test_get_submarines_by_position_when_none_registered(self):
+        ...
+
+    def test_activate_nuke_without_secret_key_or_launch_code(self):
         ...
     
 
