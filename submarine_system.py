@@ -51,7 +51,12 @@ class SubmarineSystem:
     def lookup_submarine(self, serial_number: SerialNumber) -> Optional[SubmarineInfo]:
         """Get a submarine by serial number if it exists."""
 
-        return str( self._get_sub(serial_number) )
+        sub = self._get_sub(serial_number)
+
+        if sub is None:
+            return None
+        else:
+            return str( sub )
     
     def register_submarine(self, serial_number: SerialNumber) -> None:
         """Register a submarine of given 'serial_number'."""
@@ -125,6 +130,10 @@ class SubmarineSystem:
         """
 
         sub = self._get_sub(serial_number)
+
+        if sub is None:
+            raise LookupError(f"Submarine '{serial_number}' not found.")
+
         sub.fire_torpedo(dir)
         return True
     
@@ -149,7 +158,7 @@ class SubmarineSystem:
         
         sub = self._get_sub(serial_number)
         if sub is None:
-            raise Exception(f"Submarine '{serial_number}' not found.")
+            raise LookupError(f"Submarine '{serial_number}' not found.")
 
         errors: dict[str, SensorError] = {}
         for line in sub.sensor_data:
