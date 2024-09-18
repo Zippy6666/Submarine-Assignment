@@ -69,6 +69,10 @@ class SubmarineSystem:
 
         # Create new submarine
         self._submarines[serial_number] = self._Submarine(serial_number)
+    
+    def clear_submarines(self) -> None:
+        """Removes all registered submarines."""
+        self._submarines.clear()
 
     def activate_nuke(self, serial_number: SerialNumber, auth_string: str) -> None:
         """
@@ -257,11 +261,23 @@ class SubmarineSystem:
         sorted_subs = self._get_subs_sorted_vertical()
         return str(sorted_subs[len(sorted_subs) - 1])
 
+    @staticmethod
+    def _safe_sort_subs(func: Callable) -> Callable:
+        def wrapper(system: "SubmarineSystem"):
+            if len(system._submarines) == 0:
+                raise ValueError("No submarines registered.")
+            
+            return func(system)
+
+        return wrapper
+    
+    @_safe_sort_subs
     def _get_subs_sorted_dist(self) -> list["_Submarine"]:
         """Get submarines sorted by distance from the base."""
 
         return sorted(self._submarines.values(), key=lambda submarine: submarine.dist_from_base)
 
+    @_safe_sort_subs
     def _get_subs_sorted_vertical(self) -> list["_Submarine"]:
         """Get submarines sorted by altetude from the base."""
 

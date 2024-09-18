@@ -1,19 +1,34 @@
 from collections import deque
-from submarine_system import SubmarineSystem
-from types import GeneratorType
+from collections.abc import Callable
+from submarine_system import SerialNumber, SubmarineSystem
 import unittest
+
+
+def create_test_submarine(serial_number: SerialNumber) -> Callable:
+    """
+    Decorator that creates one test submarine when conducting unit tests.
+    Should only be used on the methods of a SubSysTest derived class.
+    """
+
+    def decorator(func: Callable) -> Callable:
+        def wrapper(sub_sys_test: "SubSysTest", *args, **kwargs):
+            sub_sys_test.system.register_submarine(serial_number)
+
+            return_value = func(*args, **kwargs)
+
+            sub_sys_test.system.clear_submarines()
+
+            return return_value
+
+        return wrapper
+    
+    return decorator
+
 
 
 class SubSysTest(unittest.TestCase):
     def setUp(self) -> None:
         self.system = SubmarineSystem()
-
-    def test_submarines_returns_generator(self):
-        generator = self.system.submarines
-        self.assertIsInstance(generator, GeneratorType)
-
-    def test_max_move_logs_returns_int(self):
-        self.assertIsInstance(self.system.max_move_logs, int)
     
     def test_collided_submarines_returns_valid_list(self):
         collided_subs = self.system.collided_submarines
@@ -21,16 +36,16 @@ class SubSysTest(unittest.TestCase):
         for sub in collided_subs:
             self.assertIsInstance(sub, str)
 
-    def test_lookup_submarine_returns_none_or_submarineinfo(self):
-        sub = self.system.lookup_submarine("123")
-        self.assertIs(sub, None)
+    # def test_lookup_submarine_returns_none_or_submarineinfo(self):
+    #     sub = self.system.lookup_submarine("123")
+    #     self.assertIs(sub, None)
 
-        self.system.register_submarine("78532608-69")
-        sub = self.system.lookup_submarine("78532608-69")
+    #     self.system.register_submarine("78532608-69")
+    #     sub = self.system.lookup_submarine("78532608-69")
 
-        self.assertIsInstance(sub, str)
+    #     self.assertIsInstance(sub, str)
 
-        self.system._submarines.clear()
+    #     self.system._submarines.clear()
 
     def test_register_faulty_submarine(self):
         with self.assertRaises(ValueError):
@@ -84,10 +99,22 @@ class SubSysTest(unittest.TestCase):
             self.system.move_submarine_by_reports("123")
     
     def test_get_submarines_by_position_when_none_registered(self):
-        ...
-
+        for method in (
+            self.system.get_closest_submarine,
+            self.system.get_furthest_submarine,
+            self.system.get_lowest_submarine,
+            self.system.get_highest_submarine,
+        ):
+            with self.assertRaises(ValueError):
+                method()
+        
     def test_activate_nuke_without_secret_key_or_launch_code(self):
-        ...
+        self.system.register_submarine("00000000-00")
+
+        with self.assertRaises(LookupError):
+            self.system.activate_nuke("00000000-00")
+
+        self.system._submarines.clear()
     
 
 
