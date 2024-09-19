@@ -1,3 +1,6 @@
+"""Run this!"""
+
+
 from collections.abc import Callable, Generator
 from enum import Enum
 from typing import NewType, Optional, Union
@@ -464,9 +467,11 @@ if __name__ == "__main__":
 
     @_pretty_print("Showing sensor errors for 1 submarine...", _Colors.FAIL.value)
     def _show_sensor_errors(serial_number: SerialNumber, sensor_errors: SensorErrorList) -> None:
-        print(system.lookup_submarine(serial_number), "sensor errors:")
-        for i, error in enumerate(sensor_errors, start=1):
-            print(f"Error type {i}: {error}", end=i%3==0 and "\n" or ", ")
+        entries = 50
+
+        print(system.lookup_submarine(serial_number), f"sensor errors (showing {entries}/{len(sensor_errors)} entries):")
+        for error, i in zip(sensor_errors, range(1, entries+1)):
+            print(f"Error type {i}: {error}", end=i%2==0 and "\n" or ", ")
         print()
 
         print("^^^^^^^^^^^ Sensor error log")
